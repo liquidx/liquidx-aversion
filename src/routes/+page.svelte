@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Index from '$lib/components/Index.svelte';
+	import AversionTerminal from '$lib/components/AversionTerminal.svelte';
 </script>
 
 <div class="p-4">
-	<Index />
+	<AversionTerminal />
 </div>
