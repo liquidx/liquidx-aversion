@@ -125,7 +125,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={terminalElement}
-	class="h-96 overflow-y-auto rounded-lg bg-black p-4 font-mono text-sm text-green-400"
+	class="h-96 overflow-y-auto rounded-lg p-4 font-mono text-sm text-green-400"
 	onclick={focusInput}
 	onkeydown={handleTerminalKeydown}
 	role="application"

@@ -2,7 +2,6 @@
 	import AversionTerminal from '$lib/components/AversionTerminal.svelte';
 </script>
 
-<div class="p-4">
-	<div class="mb-4 font-bold text-amber-700">Terminal Demo</div>
-	<AversionTerminal />
-</div>
+<ul class="p-4">
+	<li class="mx-4 list-disc px-1"><a class="hover:underline" href="/of/terminal">terminal</a></li>
+</ul>
