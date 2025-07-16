@@ -125,7 +125,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={terminalElement}
-	class="h-96 overflow-y-auto rounded border border-gray-700 bg-black p-4 font-mono text-sm text-green-400"
+	class="h-96 overflow-y-auto rounded-lg bg-black p-4 font-mono text-sm text-green-400"
 	onclick={focusInput}
 	onkeydown={handleTerminalKeydown}
 	role="application"
@@ -133,23 +133,23 @@
 >
 	<!-- History display -->
 	{#each history as entry}
-		<div class="mb-2">
+		<div class="mb-4">
 			<!-- Command line -->
 			<div class="flex items-center">
-				<span class="mr-2 text-green-300">{prompt}</span>
+				<span class="mr-2 text-orange-500">{prompt}</span>
 				<span class="text-white">{entry.command}</span>
 			</div>
 
 			<!-- Output -->
 			{#each entry.output as line}
-				<div class="ml-4 text-gray-300">{line}</div>
+				<div class="ml-0 text-gray-300">{line}</div>
 			{/each}
 		</div>
 	{/each}
 
 	<!-- Current input line -->
 	<div class="flex items-center">
-		<span class="mr-2 text-green-300">{prompt}</span>
+		<span class="mr-2 text-orange-500">{prompt}</span>
 		<div class="relative flex-1">
 			<!-- Hidden text to measure cursor position -->
 			<span
@@ -171,7 +171,7 @@
 				spellcheck="false"
 			/>
 			{#if cursorVisible && inputFocused}
-				<span class="absolute top-0 h-5 w-0.5 bg-green-400" style="left: {getCursorOffset()}px;"
+				<span class="absolute top-0 h-5 w-0.5 bg-orange-400" style="left: {getCursorOffset()}px;"
 				></span>
 			{/if}
 		</div>
