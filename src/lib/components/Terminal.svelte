@@ -135,7 +135,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={terminalElement}
-	class="max-h-96 overflow-y-auto rounded-lg p-4 font-mono text-sm text-green-400"
+	class="h-content min-h-96 overflow-y-auto rounded-lg p-4 font-mono text-sm text-green-400"
 	onclick={focusInput}
 	onkeydown={handleTerminalKeydown}
 	role="application"
@@ -187,9 +187,7 @@
 				spellcheck="false"
 			/>
 			{#if cursorVisible && inputFocused}
-				<span 
-					class="absolute top-0 h-5 w-0.5 bg-orange-400"
-					style:left="{getCursorOffset()}px"
+				<span class="absolute top-0 h-5 w-0.5 bg-orange-400" style:left="{getCursorOffset()}px"
 				></span>
 			{/if}
 		</div>

@@ -186,7 +186,7 @@
 					output = ['🐱'];
 				} else {
 					const fileName = args[1];
-					
+
 					// Special case for background.jpg - display as image
 					if (fileName === 'background.jpg') {
 						const imageEntry: HistoryEntry = {
@@ -197,12 +197,12 @@
 						history = [...history, imageEntry];
 						return; // Exit early to avoid adding another entry
 					}
-					
+
 					// Check if the file exists in our file system
 					const fileExists = fileSystem.find(
 						(file) => file.name === fileName && file.type === 'file'
 					);
-					
+
 					if (fileExists) {
 						// Return a cat emoji instead of actual file contents
 						output = ['🐱'];
@@ -215,10 +215,10 @@
 			case 'curl':
 				// Handle curl command - fetch URL contents
 				if (args.length === 1) {
-					output = ['curl: try \'curl --help\' for more information'];
+					output = ["curl: try 'curl --help' for more information"];
 				} else {
 					const url = args[1];
-					
+
 					// Add command to history immediately with loading message
 					const loadingEntry: HistoryEntry = {
 						command,
@@ -226,16 +226,16 @@
 						timestamp: Date.now()
 					};
 					history = [...history, loadingEntry];
-					
+
 					// Fetch the URL
 					fetch(url)
-						.then(response => {
+						.then((response) => {
 							if (!response.ok) {
 								throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 							}
 							return response.text();
 						})
-						.then(content => {
+						.then((content) => {
 							// Update the last entry with the fetched content
 							const updatedEntry: HistoryEntry = {
 								command,
@@ -244,7 +244,7 @@
 							};
 							history = [...history.slice(0, -1), updatedEntry];
 						})
-						.catch(error => {
+						.catch((error) => {
 							// Update the last entry with error message
 							const errorEntry: HistoryEntry = {
 								command,
@@ -253,7 +253,7 @@
 							};
 							history = [...history.slice(0, -1), errorEntry];
 						});
-					
+
 					// Return early to avoid adding another entry
 					return;
 				}
@@ -273,6 +273,6 @@
 	}
 </script>
 
-<div class="">
+<div class="h-content">
 	<Terminal {history} prompt="$" placeholder="" oncommand={handleCommand} />
 </div>
