@@ -14,9 +14,10 @@
 		prompt?: string;
 		placeholder?: string;
 		oncommand?: (command: string) => void;
+		oncomplete?: (command: string) => string[];
 	}
 
-	let { history = [], prompt = '$', placeholder = '', oncommand }: Props = $props();
+	let { history = [], prompt = '$', placeholder = '', oncommand, oncomplete }: Props = $props();
 
 	let currentCommand = $state('');
 	let inputElement: HTMLInputElement;
@@ -125,9 +126,21 @@
 		if (event.key === 'Enter') {
 			event.preventDefault();
 			handleSubmit();
+		} else if (event.key === 'Tab') {
+			event.preventDefault();
+			handleTab();
 		} else {
 			// Update cursor position after key events
 			setTimeout(updateCursorPosition, 0);
+		}
+	}
+
+	function handleTab() {
+		if (oncomplete) {
+			const completions = oncomplete(currentCommand);
+			if (completions.length === 1) {
+				currentCommand = completions[0];
+			}
 		}
 	}
 </script>
