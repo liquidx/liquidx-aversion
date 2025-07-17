@@ -273,6 +273,21 @@
 	}
 </script>
 
+	function handleComplete(command: string): string[] {
+		const args = command.trim().split(/\s+/);
+		const cmd = args[0];
+		const lastArg = args[args.length - 1];
+
+		if (args.length === 1) {
+			const allCommands = ['echo', 'ls', 'pwd', 'date', 'cd', 'rm', 'cat', 'curl'];
+			return allCommands.filter((c) => c.startsWith(cmd));
+		} else {
+			const files = fileSystem.map((f) => f.name);
+			return files.filter((f) => f.startsWith(lastArg));
+		}
+	}
+</script>
+
 <div class="h-content">
-	<Terminal {history} prompt="$" placeholder="" oncommand={handleCommand} />
+	<Terminal {history} prompt="$" placeholder="" oncommand={handleCommand} oncomplete={handleComplete} />
 </div>
