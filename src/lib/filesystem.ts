@@ -88,5 +88,16 @@ export const fileSystem: FileEntry[] = [
 		owner: 'user',
 		group: 'user',
 		links: 2
+	},
+	{
+		name: 'background.jpg',
+		type: 'file',
+		permissions: '-rw-r--r--',
+		size: 245760,
+		modified: 'Jan 15 10:26',
+		hidden: false,
+		owner: 'user',
+		group: 'user',
+		links: 1
 	}
 ];

@@ -3,7 +3,9 @@
 
 	interface HistoryEntry {
 		command: string;
-		output: string[];
+		output?: string[];
+		html?: string;
+		image?: string;
 		timestamp?: number;
 	}
 
@@ -24,24 +26,28 @@
 	let cursorPosition = $state(0);
 	let measureElement: HTMLSpanElement;
 
-	// Blinking cursor effect
+	// Blinking cursor effect and auto-focus
 	onMount(() => {
 		const interval = setInterval(() => {
 			cursorVisible = !cursorVisible;
 		}, 500);
+
+		// Auto-focus the input when component mounts
+		if (inputElement) {
+			inputElement.focus();
+		}
 
 		return () => clearInterval(interval);
 	});
 
 	// Auto-scroll to bottom when history updates
 	$effect(() => {
-		if (history.length > 0) {
-			tick().then(() => {
-				if (terminalElement) {
-					terminalElement.scrollTop = terminalElement.scrollHeight;
-				}
-			});
-		}
+		// Always scroll to bottom when history changes or component updates
+		tick().then(() => {
+			if (terminalElement) {
+				terminalElement.scrollTop = terminalElement.scrollHeight;
+			}
+		});
 	});
 
 	// Focus input when terminal is clicked or focused
@@ -100,11 +106,15 @@
 			currentCommand = '';
 			cursorPosition = 0;
 
-			// Force update the input element and refocus.
+			// Force update the input element and refocus, then scroll to bottom
 			tick().then(() => {
 				if (inputElement) {
 					inputElement.value = '';
 					inputElement.focus();
+				}
+				// Ensure we scroll to bottom after command submission
+				if (terminalElement) {
+					terminalElement.scrollTop = terminalElement.scrollHeight;
 				}
 			});
 		}
@@ -125,7 +135,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	bind:this={terminalElement}
-	class="h-96 overflow-y-auto rounded-lg p-4 font-mono text-sm text-green-400"
+	class="max-h-96 overflow-y-auto rounded-lg p-4 font-mono text-sm text-green-400"
 	onclick={focusInput}
 	onkeydown={handleTerminalKeydown}
 	role="application"
@@ -141,9 +151,15 @@
 			</div>
 
 			<!-- Output -->
-			{#each entry.output as line}
-				<div class="ml-0 text-gray-300">{line}</div>
-			{/each}
+			{#if entry.output}
+				{#each entry.output as line}
+					<div class="ml-0 text-gray-300">{line}</div>
+				{/each}
+			{:else if entry.html}
+				<div class="ml-0 text-gray-300">{@html entry.html}</div>
+			{:else if entry.image}
+				<img src={entry.image} alt="{entry.command} output" class="mt-2 max-w-sm rounded" />
+			{/if}
 		</div>
 	{/each}
 
@@ -171,7 +187,9 @@
 				spellcheck="false"
 			/>
 			{#if cursorVisible && inputFocused}
-				<span class="absolute top-0 h-5 w-0.5 bg-orange-400" style="left: {getCursorOffset()}px;"
+				<span 
+					class="absolute top-0 h-5 w-0.5 bg-orange-400"
+					style:left="{getCursorOffset()}px"
 				></span>
 			{/if}
 		</div>

@@ -1,0 +1,1 @@
+- This is a Svelte 5 project using Tailwind CSS 4.
