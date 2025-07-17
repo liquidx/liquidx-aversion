@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Terminal from './Terminal.svelte';
 	import { fileSystem, type FileEntry } from '$lib/filesystem.js';
+	import { callGemini } from '$lib/gemini.js';
 
 	interface HistoryEntry {
 		command: string;
@@ -249,6 +250,47 @@
 							const errorEntry: HistoryEntry = {
 								command,
 								output: [`curl: (${error.message})`],
+								timestamp: Date.now()
+							};
+							history = [...history.slice(0, -1), errorEntry];
+						});
+
+					// Return early to avoid adding another entry
+					return;
+				}
+				break;
+
+			case 'gemini':
+				// Handle gemini command - call Gemini API
+				if (args.length === 1) {
+					output = ['gemini: Please provide a prompt. Usage: gemini "your question here"'];
+				} else {
+					const prompt = args.slice(1).join(' ').replace(/^["']|["']$/g, '');
+
+					// Add command to history immediately with loading message
+					const loadingEntry: HistoryEntry = {
+						command,
+						output: ['Thinking...'],
+						timestamp: Date.now()
+					};
+					history = [...history, loadingEntry];
+
+					// Call Gemini API
+					callGemini(prompt)
+						.then((response) => {
+							// Update the last entry with the Gemini response
+							const updatedEntry: HistoryEntry = {
+								command,
+								output: response.split('\n'),
+								timestamp: Date.now()
+							};
+							history = [...history.slice(0, -1), updatedEntry];
+						})
+						.catch((error) => {
+							// Update the last entry with error message
+							const errorEntry: HistoryEntry = {
+								command,
+								output: [`gemini: Error - ${error.message}`],
 								timestamp: Date.now()
 							};
 							history = [...history.slice(0, -1), errorEntry];
