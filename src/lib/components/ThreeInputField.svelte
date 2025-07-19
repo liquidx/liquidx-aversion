@@ -30,6 +30,8 @@
 	let cursorHeight = 4;
 	let cursorWidth = 0.5;
 	let cursorMarginX = 0.5;
+	let initialViewWidth = 0;
+	let initialViewHeight = 0;
 
 	let previousText = '';
 	let animatingCharacters: {
@@ -61,10 +63,12 @@
 				camera.updateProjectionMatrix();
 				renderer.setSize(width, height);
 
-				if (backgroundBox) {
-					const boxWidth = camera.right - camera.left;
-					const boxHeight = camera.top - camera.bottom;
-					backgroundBox.scale.set(boxWidth, boxHeight, 1);
+				if (backgroundBox && initialViewWidth > 0) {
+					const newViewWidth = camera.right - camera.left;
+					const newViewHeight = camera.top - camera.bottom;
+					const scaleX = (newViewWidth * 1.5) / (initialViewWidth * 1.5);
+					const scaleY = (newViewHeight * 1.5) / (initialViewHeight * 1.5);
+					backgroundBox.scale.set(scaleX, scaleY, 1);
 				}
 			}
 		};
@@ -121,15 +125,71 @@
 		renderer.setSize(width, height);
 		renderer.setPixelRatio(window.devicePixelRatio);
 
-		// Create background box
-		const boxWidth = camera.right - camera.left;
-		const boxHeight = camera.top - camera.bottom;
-		const boxGeometry = new THREE.BoxGeometry(1, 1, 0.1);
-		const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xdddddd });
-		backgroundBox = new THREE.Mesh(boxGeometry, boxMaterial);
-		backgroundBox.scale.set(boxWidth, boxHeight, 1);
-		backgroundBox.position.set(cameraX, cameraY, -1); // behind text
+		// Enable shadows
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+		// Create background curved surface
+		const viewWidth = camera.right - camera.left;
+		const viewHeight = camera.top - camera.bottom;
+		initialViewWidth = viewWidth;
+		initialViewHeight = viewHeight;
+
+		// Create vertical background wall
+		const wallGeometry = new THREE.PlaneGeometry(viewWidth * 1.5, viewHeight * 1.5);
+
+		// Create horizontal reflective floor
+		const floorGeometry = new THREE.PlaneGeometry(viewWidth * 2, viewHeight);
+		floorGeometry.rotateX(-Math.PI / 2); // Rotate to be horizontal
+
+		// Create a simple gradient environment map for reflections
+		const envMapCanvas = document.createElement('canvas');
+		envMapCanvas.width = 256;
+		envMapCanvas.height = 256;
+		const envMapContext = envMapCanvas.getContext('2d')!;
+
+		// Create a radial gradient for the environment
+		const gradient = envMapContext.createRadialGradient(128, 128, 0, 128, 128, 128);
+		gradient.addColorStop(0, '#ffffff'); // Pure white center
+		gradient.addColorStop(0.5, '#f0f0f0'); // Light gray
+		gradient.addColorStop(1, '#d0d0d0'); // Medium gray
+
+		envMapContext.fillStyle = gradient;
+		envMapContext.fillRect(0, 0, 256, 256);
+
+		const envMapTexture = new THREE.CanvasTexture(envMapCanvas);
+		envMapTexture.mapping = THREE.EquirectangularReflectionMapping;
+
+		// Also set the scene environment for global reflections
+		scene.environment = envMapTexture;
+
+		// Create wall material (less reflective)
+		const wallMaterial = new THREE.MeshStandardMaterial({
+			color: 0xc0c0c0,
+			metalness: 0.1,
+			roughness: 0.8
+		});
+
+		// Create floor material (highly reflective)
+		const floorMaterial = new THREE.MeshStandardMaterial({
+			color: 0xc0c0c0,
+			metalness: 1.0,
+			roughness: 0.05,
+			envMap: envMapTexture,
+			envMapIntensity: 2.0
+		});
+
+		// Create and position wall
+		backgroundBox = new THREE.Mesh(wallGeometry, wallMaterial);
+		backgroundBox.position.set(cameraX, cameraY, -8); // Behind text
+		backgroundBox.receiveShadow = true;
 		scene.add(backgroundBox);
+
+		// Create and position floor
+		const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+		floor.position.set(cameraX, cameraY - viewHeight * 0.6, -3); // Below text
+		floor.receiveShadow = true;
+		scene.add(floor);
 
 		// Create cursor first
 		createCursor();
@@ -138,11 +198,29 @@
 		createText();
 
 		// Add some lights for better visibility
-		const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+		const ambientLight = new THREE.AmbientLight(0x404040, 0.01);
 		scene.add(ambientLight);
 
-		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-		directionalLight.position.set(1, 1, 1);
+		// Main directional light (key light)
+		const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+		directionalLight.position.set(0, 8, 15);
+
+		// Enable shadow casting
+		directionalLight.castShadow = true;
+		directionalLight.shadow.mapSize.width = 2048;
+		directionalLight.shadow.mapSize.height = 2048;
+		directionalLight.shadow.camera.near = 0.5;
+		directionalLight.shadow.camera.far = 50;
+		directionalLight.shadow.camera.left = -200;
+		directionalLight.shadow.camera.right = 200;
+		directionalLight.shadow.camera.top = 20;
+		directionalLight.shadow.camera.bottom = -20;
+
+		// Make shadows much softer
+		directionalLight.shadow.radius = 25;
+		directionalLight.shadow.blurSamples = 50;
+		directionalLight.shadow.bias = -0.0001;
+
 		scene.add(directionalLight);
 	}
 
@@ -224,6 +302,7 @@
 			// Create mesh and position it
 			const charMesh = new THREE.Mesh(charGeometry, charMaterial);
 			charMesh.position.x = xPosition;
+			charMesh.castShadow = true; // Enable shadow casting
 
 			// Check if this is a new character that should animate in
 			const isNewCharacter = isTextLonger && i >= previousText.length;
@@ -264,7 +343,7 @@
 	function createCursor() {
 		// Create cursor geometry (rectangular block)
 		const cursorGeometry = new THREE.BoxGeometry(cursorWidth, cursorHeight, 0.3);
-		const cursorMaterial = new THREE.MeshBasicMaterial({
+		const cursorMaterial = new THREE.MeshPhongMaterial({
 			color: 0x0066ff,
 			transparent: true,
 			opacity: 1
