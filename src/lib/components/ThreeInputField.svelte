@@ -10,7 +10,7 @@
 		height?: number;
 	}
 
-	let { text = '0', width = 800, height = 80 }: Props = $props();
+	let { text = '0', width = 600, height = 60 }: Props = $props();
 
 	let canvas: HTMLCanvasElement;
 	let scene: THREE.Scene;
@@ -504,8 +504,8 @@
 </script>
 
 <div
-	class="three-container rounded-lg"
-	style="width: {width}px; height: {height}px; position: relative;"
+	class="three-container"
+	style="width: {width}px; height: {height}px; position: relative; w-[600px]"
 >
 	<canvas class="block rounded-lg" bind:this={canvas}></canvas>
 	<input
