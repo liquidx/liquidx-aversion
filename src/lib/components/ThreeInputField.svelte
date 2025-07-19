@@ -233,7 +233,8 @@
 		canvas.addEventListener('click', () => {
 			// Only focus on touch devices (mobile)
 			if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-				hiddenInput.focus();
+				// Prevent scroll behavior when focusing
+				hiddenInput.focus({ preventScroll: true });
 			}
 		});
 
@@ -326,8 +327,8 @@
 
 			// Create material
 			const charMaterial = new THREE.MeshPhongMaterial({
-				color: 0x000000,
-				shininess: 100
+				color: 0x333333,
+				shininess: 80
 			});
 
 			// Create mesh and position it
@@ -502,12 +503,15 @@
 	}
 </script>
 
-<div class="three-container rounded-lg" style="width: {width}px; height: {height}px; position: relative;">
+<div
+	class="three-container rounded-lg"
+	style="width: {width}px; height: {height}px; position: relative;"
+>
 	<canvas class="block rounded-lg" bind:this={canvas}></canvas>
 	<input
 		bind:this={hiddenInput}
 		type="text"
-		style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;"
+		style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; transform: scale(0);"
 		tabindex="-1"
 		autocomplete="off"
 		autocorrect="off"
