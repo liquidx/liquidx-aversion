@@ -26,7 +26,11 @@
 	let viewportWidth = 10;
 	let cameraX = 45;
 	let cameraY = 2;
-	let cursorY = 1;
+	let cursorY = 1.5;
+	let cursorHeight = 4;
+	let cursorWidth = 0.5;
+	let cursorMarginX = 0.5;
+
 	let previousText = '';
 	let animatingCharacters: {
 		mesh: THREE.Mesh;
@@ -259,9 +263,9 @@
 
 	function createCursor() {
 		// Create cursor geometry (rectangular block)
-		const cursorGeometry = new THREE.BoxGeometry(0.2, 3, 0.3);
-		const cursorMaterial = new THREE.MeshPhongMaterial({
-			color: 0x000000,
+		const cursorGeometry = new THREE.BoxGeometry(cursorWidth, cursorHeight, 0.3);
+		const cursorMaterial = new THREE.MeshBasicMaterial({
+			color: 0x0066ff,
 			transparent: true,
 			opacity: 1
 		});
@@ -276,7 +280,7 @@
 
 		if (characterMeshes.length === 0) {
 			// If no text, position at start
-			cursor.position.x = 0;
+			cursor.position.x = cursorMarginX;
 			cursor.position.y = cursorY;
 		} else {
 			// Position cursor at the end of the text
@@ -284,7 +288,7 @@
 			if (lastMesh && lastMesh.geometry.boundingBox) {
 				const lastCharWidth =
 					lastMesh.geometry.boundingBox.max.x - lastMesh.geometry.boundingBox.min.x;
-				cursor.position.x = lastMesh.position.x + lastCharWidth + 0.1;
+				cursor.position.x = lastMesh.position.x + lastCharWidth + cursorMarginX;
 				cursor.position.y = cursorY;
 			}
 		}
