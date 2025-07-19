@@ -32,6 +32,7 @@
 	let cursorMarginX = 0.5;
 	let initialViewWidth = 0;
 	let initialViewHeight = 0;
+	let hiddenInput: HTMLInputElement;
 
 	let previousText = '';
 	let animatingCharacters: {
@@ -222,6 +223,36 @@
 		directionalLight.shadow.bias = -0.0001;
 
 		scene.add(directionalLight);
+
+		// Setup mobile keyboard handling
+		setupMobileInput();
+	}
+
+	function setupMobileInput() {
+		// Add click handler to canvas to focus hidden input (only on mobile)
+		canvas.addEventListener('click', () => {
+			// Only focus on touch devices (mobile)
+			if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+				hiddenInput.focus();
+			}
+		});
+
+		// Handle input events from hidden input
+		hiddenInput.addEventListener('input', (e) => {
+			const target = e.target as HTMLInputElement;
+			text = target.value;
+		});
+
+		// Handle enter key to dismiss keyboard
+		hiddenInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				hiddenInput.blur(); // Dismiss keyboard
+				e.preventDefault();
+			}
+		});
+
+		// Keep hidden input value in sync with text prop
+		hiddenInput.value = text;
 	}
 
 	function createText() {
@@ -379,6 +410,10 @@
 		if (font && scene) {
 			createText();
 		}
+		// Keep hidden input in sync
+		if (hiddenInput) {
+			hiddenInput.value = text;
+		}
 	});
 
 	function updateCameraPosition() {
@@ -467,8 +502,18 @@
 	}
 </script>
 
-<div class="three-container rounded-lg" style="width: {width}px; height: {height}px;">
+<div class="three-container rounded-lg" style="width: {width}px; height: {height}px; position: relative;">
 	<canvas class="block rounded-lg" bind:this={canvas}></canvas>
+	<input
+		bind:this={hiddenInput}
+		type="text"
+		style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;"
+		tabindex="-1"
+		autocomplete="off"
+		autocorrect="off"
+		autocapitalize="off"
+		spellcheck="false"
+	/>
 </div>
 
 <style>
