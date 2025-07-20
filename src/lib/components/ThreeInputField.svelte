@@ -233,6 +233,8 @@
 		canvas.addEventListener('click', () => {
 			// Only focus on touch devices (mobile)
 			if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+				// Ensure previousText is synced before focusing
+				previousText = text;
 				// Prevent scroll behavior when focusing
 				hiddenInput.focus({ preventScroll: true });
 			}
@@ -252,8 +254,15 @@
 			}
 		});
 
+		// Sync previousText when input gains focus to prevent duplication
+		hiddenInput.addEventListener('focus', () => {
+			previousText = text;
+		});
+
 		// Keep hidden input value in sync with text prop
 		hiddenInput.value = text;
+		// Initialize previousText to match current text
+		previousText = text;
 	}
 
 	function createText() {
@@ -325,9 +334,58 @@
 			// const charDepth = charGeometry.boundingBox!.max.z - charGeometry.boundingBox!.min.z;
 			// charGeometry.translate(0, -charHeight / 2, -charDepth / 2);
 
-			// Create material
+			// Create pastel rainbow colors based on character position
+			const hue = (i * 60) % 360; // 60 degrees apart for distinct colors, cycling through spectrum
+
+			// Convert HSL to RGB for pastel colors
+			// Using high lightness (80%) and medium saturation (60%) for pastel effect
+			const saturation = 0.8;
+			const lightness = 0.5;
+
+			const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+			const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+			const m = lightness - c / 2;
+
+			let r = 0,
+				g = 0,
+				b = 0;
+
+			if (hue >= 0 && hue < 60) {
+				r = c;
+				g = x;
+				b = 0;
+			} else if (hue >= 60 && hue < 120) {
+				r = x;
+				g = c;
+				b = 0;
+			} else if (hue >= 120 && hue < 180) {
+				r = 0;
+				g = c;
+				b = x;
+			} else if (hue >= 180 && hue < 240) {
+				r = 0;
+				g = x;
+				b = c;
+			} else if (hue >= 240 && hue < 300) {
+				r = x;
+				g = 0;
+				b = c;
+			} else if (hue >= 300 && hue < 360) {
+				r = c;
+				g = 0;
+				b = x;
+			}
+
+			// Convert to final RGB values
+			const finalR = Math.round((r + m) * 255);
+			const finalG = Math.round((g + m) * 255);
+			const finalB = Math.round((b + m) * 255);
+
+			const pastelColor = (finalR << 16) | (finalG << 8) | finalB;
+
+			// Create material with pastel rainbow color
 			const charMaterial = new THREE.MeshPhongMaterial({
-				color: 0x333333,
+				color: pastelColor,
 				shininess: 80
 			});
 
