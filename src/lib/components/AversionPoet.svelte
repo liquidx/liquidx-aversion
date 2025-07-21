@@ -17,7 +17,7 @@
 		// Step 1: Convert to Poem
 		statusMessage = 'Converting to Poem...';
 		try {
-			const poemPrompt = `Read the follow code and write a poem that describes what the code does: ${inputText}`;
+			const poemPrompt = `Read the follow code and write a poem in the style of TS Eliot that describes what the code does. Only output the poem and nothing else: ${inputText}`;
 			const poemResponse = await fetch('/api/gemini/generate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -79,12 +79,20 @@ ${outputPoem}`;
 			<textarea
 				bind:value={inputText}
 				placeholder="Paste your code here..."
-				class="min-h-[200px] w-full resize-y rounded-lg border-2 border-gray-200 bg-gray-100 p-4 font-mono text-sm leading-relaxed text-gray-800 transition-colors focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 focus:outline-none"
+				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
 				rows="15"
 			></textarea>
-			<div class="flex gap-2 mt-2">
-				<button on:click={() => (inputText = fibonacci)} class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300">Fibonacci</button>
-				<button on:click={() => (inputText = threeJsCube)} class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300">Three.js Cube</button>
+			<div class="mt-2 flex gap-2">
+				<button
+					on:click={() => (inputText = fibonacci)}
+					class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+					>Fibonacci</button
+				>
+				<button
+					on:click={() => (inputText = threeJsCube)}
+					class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+					>Three.js Cube</button
+				>
 			</div>
 		</div>
 
@@ -112,7 +120,7 @@ ${outputPoem}`;
 			<textarea
 				bind:value={outputPoem}
 				placeholder="Your poem will appear here..."
-				class="min-h-[200px] w-full resize-y rounded-lg border-2 border-gray-200 bg-gray-100 p-4 font-mono text-sm leading-relaxed text-gray-800 transition-colors focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 focus:outline-none"
+				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
 				rows="15"
 				readonly
 			></textarea>
@@ -124,7 +132,7 @@ ${outputPoem}`;
 			<textarea
 				bind:value={outputCode}
 				placeholder="Your code will appear here..."
-				class="min-h-[200px] w-full resize-y rounded-lg border-2 border-gray-200 bg-gray-100 p-4 font-mono text-sm leading-relaxed text-gray-800 transition-colors focus:border-blue-500 focus:ring-3 focus:ring-blue-500/10 focus:outline-none"
+				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
 				rows="15"
 				readonly
 			></textarea>
