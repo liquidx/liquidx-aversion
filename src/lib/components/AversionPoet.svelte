@@ -1,7 +1,9 @@
 <script lang="ts">
 	let inputText = '';
 	let outputPoem = '';
+	let outputCode = '';
 	let isConverting = false;
+	let isGeneratingCode = false;
 
 	async function convertToPoem() {
 		if (!inputText.trim()) return;
@@ -9,6 +11,7 @@
 		const prompt = `Read the follow code and write a poem that describes what the code does: ${inputText}`;
 
 		isConverting = true;
+		outputCode = ''; // Clear previous code output
 		try {
 			const response = await fetch('/api/gemini/generate', {
 				method: 'POST',
@@ -32,6 +35,39 @@
 			isConverting = false;
 		}
 	}
+
+	async function generateCode() {
+		if (!outputPoem.trim()) return;
+
+		const prompt = `Return the following poem and generate javascript code that does that this describes 
+to the best of your ability. Output just the code with no comments, no html and no explanation. Output as just the javascript code as a single function.
+
+${outputPoem}`;
+
+		isGeneratingCode = true;
+		try {
+			const response = await fetch('/api/gemini/generate', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ prompt: prompt })
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			console.log(data);
+			outputCode = data.response || 'No code generated';
+		} catch (error) {
+			console.error('Error generating code:', error);
+			outputCode = 'Error generating code. Please try again.';
+		} finally {
+			isGeneratingCode = false;
+		}
+	}
 </script>
 
 <div class="aversion-poet-container">
@@ -47,7 +83,7 @@
 			></textarea>
 		</div>
 
-		<!-- Convert Button -->
+		<!-- Convert Buttons -->
 		<div class="convert-button-wrapper">
 			<button
 				on:click={convertToPoem}
@@ -61,18 +97,42 @@
 					Convert to Poem
 				{/if}
 			</button>
+			<button
+				on:click={generateCode}
+				disabled={!outputPoem.trim() || isGeneratingCode || isConverting}
+				class="convert-button"
+			>
+				{#if isGeneratingCode}
+					<span class="loading-spinner"></span>
+					Generating...
+				{:else}
+					Generate Code
+				{/if}
+			</button>
 		</div>
 
-		<!-- Output Text Box -->
-		<div class="text-box-wrapper">
-			<h3 class="text-box-title">Generated Poem</h3>
-			<textarea
-				bind:value={outputPoem}
-				placeholder="Your poem will appear here..."
-				class="text-box output-box"
-				rows="20"
-				readonly
-			></textarea>
+		<!-- Output Text Boxes -->
+		<div class="output-boxes-wrapper">
+			<div class="text-box-wrapper">
+				<h3 class="text-box-title">Generated Poem</h3>
+				<textarea
+					bind:value={outputPoem}
+					placeholder="Your poem will appear here..."
+					class="text-box output-box"
+					rows="10"
+					readonly
+				></textarea>
+			</div>
+			<div class="text-box-wrapper">
+				<h3 class="text-box-title">Generated Code</h3>
+				<textarea
+					bind:value={outputCode}
+					placeholder="Your code will appear here..."
+					class="text-box output-box"
+					rows="10"
+					readonly
+				></textarea>
+			</div>
 		</div>
 	</div>
 </div>
@@ -91,6 +151,12 @@
 		align-items: start;
 	}
 
+	.output-boxes-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
 	.text-box-wrapper {
 		display: flex;
 		flex-direction: column;
@@ -106,7 +172,6 @@
 
 	.text-box {
 		width: 100%;
-		min-height: 400px;
 		padding: 1rem;
 		border: 2px solid #e5e7eb;
 		border-radius: 0.5rem;
@@ -115,6 +180,14 @@
 		line-height: 1.5;
 		resize: vertical;
 		transition: border-color 0.2s ease;
+	}
+
+	.input-box {
+		min-height: 424px;
+	}
+
+	.output-box {
+		min-height: 200px;
 	}
 
 	.text-box:focus {
@@ -134,9 +207,11 @@
 
 	.convert-button-wrapper {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		min-height: 400px;
+		min-height: 424px;
+		gap: 1rem;
 	}
 
 	.convert-button {
@@ -194,12 +269,20 @@
 			gap: 1.5rem;
 		}
 
+		.output-boxes-wrapper {
+			gap: 1.5rem;
+		}
+
 		.convert-button-wrapper {
 			min-height: auto;
 			order: 2;
+			flex-direction: row;
+			flex-wrap: wrap;
 		}
 
-		.text-box {
+		.text-box,
+		.input-box,
+		.output-box {
 			min-height: 300px;
 		}
 
