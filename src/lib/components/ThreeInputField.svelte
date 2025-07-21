@@ -335,11 +335,11 @@
 			// charGeometry.translate(0, -charHeight / 2, -charDepth / 2);
 
 			// Create pastel rainbow colors based on character position
-			const hue = (i * 60) % 360; // 60 degrees apart for distinct colors, cycling through spectrum
+			const hue = (i * 10) % 360; // 60 degrees apart for distinct colors, cycling through spectrum
 
 			// Convert HSL to RGB for pastel colors
 			// Using high lightness (80%) and medium saturation (60%) for pastel effect
-			const saturation = 0.8;
+			const saturation = 0.7;
 			const lightness = 0.5;
 
 			const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
