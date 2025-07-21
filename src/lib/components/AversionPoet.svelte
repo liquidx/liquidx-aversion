@@ -72,15 +72,15 @@ ${outputPoem}`;
 </script>
 
 <div class="max-w-3xl p-8 md:p-4">
-	<div class="flex flex-col gap-8 md:gap-6">
+	<div class="flex flex-col gap-8 text-sm md:gap-6">
 		<!-- Input Text Box -->
 		<div class="flex flex-col gap-2">
 			<h3 class="m-0 font-semibold text-gray-700">Input Code</h3>
 			<textarea
 				bind:value={inputText}
 				placeholder="Paste your code here..."
-				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="15"
+				class="min-h-32 w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
+				rows="8"
 			></textarea>
 			<div class="mt-2 flex gap-2">
 				<button
@@ -101,7 +101,7 @@ ${outputPoem}`;
 			<button
 				on:click={runConversion}
 				disabled={!inputText.trim() || isLoading}
-				class="flex min-w-[200px] cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-purple-500 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:not-disabled:translate-y-[-2px] hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-60"
+				class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-purple-500 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:not-disabled:translate-y-[-2px] hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if isLoading}
 					<span
@@ -120,8 +120,8 @@ ${outputPoem}`;
 			<textarea
 				bind:value={outputPoem}
 				placeholder="Your poem will appear here..."
-				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="15"
+				class=" w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
+				rows="10"
 				readonly
 			></textarea>
 		</div>
@@ -132,8 +132,8 @@ ${outputPoem}`;
 			<textarea
 				bind:value={outputCode}
 				placeholder="Your code will appear here..."
-				class="min-h-[200px] w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="15"
+				class="w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
+				rows="10"
 				readonly
 			></textarea>
 		</div>
