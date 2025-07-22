@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { fibonacci, threeJsCube } from '../code-snippets';
+	import { fibonacci, threeJsCube, binarySearch, recursiveFactorial, promiseChain, bubbleSort } from '../code-snippets';
 
 	let inputText = '';
 	let outputPoem = '';
@@ -124,7 +124,7 @@ ${outputPoem}`;
 					class="min-h-32 w-full resize-none overflow-hidden rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-gray-300 transition-colors focus:outline-none"
 					rows="1"
 				></textarea>
-				<div class="mt-2 flex gap-2">
+				<div class="mt-2 flex flex-wrap gap-2">
 					<button
 						on:click={() => {
 							inputText = fibonacci;
@@ -132,6 +132,38 @@ ${outputPoem}`;
 						}}
 						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
 						>Fibonacci</button
+					>
+					<button
+						on:click={() => {
+							inputText = binarySearch;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Binary Search</button
+					>
+					<button
+						on:click={() => {
+							inputText = recursiveFactorial;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Factorial</button
+					>
+					<button
+						on:click={() => {
+							inputText = promiseChain;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Promise Chain</button
+					>
+					<button
+						on:click={() => {
+							inputText = bubbleSort;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Bubble Sort</button
 					>
 					<button
 						on:click={() => {
