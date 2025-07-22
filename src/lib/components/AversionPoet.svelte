@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { fibonacci, threeJsCube } from '../code-snippets';
 
 	let inputText = '';
@@ -6,15 +7,38 @@
 	let outputCode = '';
 	let isLoading = false;
 	let statusMessage = 'Convert';
+	let textareaElement: HTMLTextAreaElement;
+	let codeTextareaElement: HTMLTextAreaElement;
 
-	async function runConversion() {
+	// UI States: 'input' | 'poem' | 'code'
+	let currentState: 'input' | 'poem' | 'code' = 'input';
+
+	function autoResize(element?: HTMLTextAreaElement) {
+		const targetElement = element || textareaElement;
+		if (targetElement) {
+			targetElement.style.height = 'auto';
+			targetElement.style.height = targetElement.scrollHeight + 'px';
+		}
+	}
+
+	function autoResizeCode() {
+		autoResize(codeTextareaElement);
+	}
+
+	$: if (textareaElement && inputText !== undefined) {
+		autoResize();
+	}
+
+	$: if (codeTextareaElement && outputCode && currentState === 'code') {
+		setTimeout(autoResizeCode, 0);
+	}
+
+	async function generatePoem() {
 		if (!inputText.trim() || isLoading) return;
 
 		isLoading = true;
 		outputPoem = '';
-		outputCode = '';
 
-		// Step 1: Convert to Poem
 		statusMessage = 'Converting to Poem...';
 		try {
 			const poemPrompt = `Read the follow code and write a poem in the style of TS Eliot that describes what the code does. Only output the poem and nothing else: ${inputText}`;
@@ -34,19 +58,32 @@
 			if (outputPoem === 'No poem generated.') {
 				throw new Error('Poem generation failed.');
 			}
+
+			currentState = 'poem';
 		} catch (error) {
 			console.error('Error generating poem:', error);
 			outputPoem = 'Error generating poem. Please try again.';
+		} finally {
 			isLoading = false;
-			statusMessage = 'Convert';
-			return;
+			statusMessage = 'Generate Poem';
 		}
+	}
 
-		// Step 2: Generate Code from Poem
+	async function generateCode() {
+		if (!outputPoem.trim() || isLoading) return;
+
+		isLoading = true;
+		outputCode = '';
+
 		statusMessage = 'Generating Code...';
 		try {
 			const codePrompt = `Return the following poem and generate javascript code that does that this describes 
-to the best of your ability. Output just the code with no comments, no html and no explanation. Output as just the javascript code as a single function.
+to the best of your ability. Output just the code with no comments, no html and no explanation. 
+Output valid javascript code as a single function with the function name "run". 
+This code should be executable in the browser javascript interpreter.
+Do not use any markdown, only output javascript code.
+
+Here is the poem:
 
 ${outputPoem}`;
 			const codeResponse = await fetch('/api/gemini/generate', {
@@ -61,81 +98,113 @@ ${outputPoem}`;
 
 			const codeData = await codeResponse.json();
 			outputCode = codeData.response || 'No code generated.';
+
+			currentState = 'code';
 		} catch (error) {
 			console.error('Error generating code:', error);
 			outputCode = 'Error generating code. Please try again.';
 		} finally {
 			isLoading = false;
-			statusMessage = 'Convert';
+			statusMessage = 'Convert to Code';
 		}
 	}
 </script>
 
 <div class="max-w-3xl p-8 md:p-4">
 	<div class="flex flex-col gap-8 text-sm md:gap-6">
-		<!-- Input Text Box -->
-		<div class="flex flex-col gap-2">
-			<h3 class="m-0 font-semibold text-gray-700">Input Code</h3>
-			<textarea
-				bind:value={inputText}
-				placeholder="Paste your code here..."
-				class="min-h-32 w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="8"
-			></textarea>
-			<div class="mt-2 flex gap-2">
-				<button
-					on:click={() => (inputText = fibonacci)}
-					class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-					>Fibonacci</button
-				>
-				<button
-					on:click={() => (inputText = threeJsCube)}
-					class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-					>Three.js Cube</button
-				>
+		{#if currentState === 'input'}
+			<!-- Input Text Box -->
+			<div class="flex flex-col gap-2">
+				<h3 class="m-0 font-semibold text-gray-700">Input Code</h3>
+				<textarea
+					bind:this={textareaElement}
+					bind:value={inputText}
+					on:input={() => autoResize()}
+					placeholder="Paste your code here..."
+					class="min-h-32 w-full resize-none overflow-hidden rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-gray-300 transition-colors focus:outline-none"
+					rows="1"
+				></textarea>
+				<div class="mt-2 flex gap-2">
+					<button
+						on:click={() => {
+							inputText = fibonacci;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Fibonacci</button
+					>
+					<button
+						on:click={() => {
+							inputText = threeJsCube;
+							setTimeout(autoResize, 0);
+						}}
+						class="rounded-md bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+						>Three.js Cube</button
+					>
+				</div>
 			</div>
-		</div>
 
-		<!-- Convert Button -->
-		<div class="flex items-center justify-start py-4">
-			<button
-				on:click={runConversion}
-				disabled={!inputText.trim() || isLoading}
-				class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-purple-500 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:not-disabled:translate-y-[-2px] hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if isLoading}
-					<span
-						class="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current"
-					></span>
-					{statusMessage}
-				{:else}
-					Convert
-				{/if}
-			</button>
-		</div>
+			<!-- Generate Poem Button -->
+			<div class="flex items-center justify-start py-4">
+				<button
+					on:click={generatePoem}
+					disabled={!inputText.trim() || isLoading}
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-purple-500 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:not-disabled:translate-y-[-2px] hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					{#if isLoading}
+						<span
+							class="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current"
+						></span>
+						{statusMessage}
+					{:else}
+						Generate Poem
+					{/if}
+				</button>
+			</div>
+		{/if}
 
-		<!-- Generated Poem Text Box -->
-		<div class="flex flex-col gap-2">
-			<h3 class="m-0 font-semibold text-gray-700">Generated Poem</h3>
-			<textarea
-				bind:value={outputPoem}
-				placeholder="Your poem will appear here..."
-				class=" w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="10"
-				readonly
-			></textarea>
-		</div>
+		{#if currentState === 'poem'}
+			<!-- Generated Poem Text Box -->
+			<div class="flex flex-col gap-2">
+				<pre
+					class="w-full rounded-lg p-4 font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-300">{outputPoem}
+				</pre>
+				<pre
+					class="w-full rounded-lg p-4 font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-300">- G. Emini, 2025</pre>
+			</div>
 
-		<!-- Generated Code Text Box -->
-		<div class="flex flex-col gap-2">
-			<h3 class="m-0 font-semibold text-gray-700">Generated Code</h3>
-			<textarea
-				bind:value={outputCode}
-				placeholder="Your code will appear here..."
-				class="w-full resize-y rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
-				rows="10"
-				readonly
-			></textarea>
-		</div>
+			<!-- Convert to Code Button -->
+			<div class="flex items-center justify-start py-4">
+				<button
+					on:click={generateCode}
+					disabled={!outputPoem.trim() || isLoading}
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-green-500 to-blue-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:not-disabled:translate-y-[-2px] hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					{#if isLoading}
+						<span
+							class="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current"
+						></span>
+						{statusMessage}
+					{:else}
+						Convert to Code
+					{/if}
+				</button>
+			</div>
+		{/if}
+
+		{#if currentState === 'code'}
+			<!-- Generated Code Text Box -->
+			<div class="flex flex-col gap-2">
+				<h3 class="m-0 font-semibold text-gray-700">Generated Code</h3>
+				<textarea
+					bind:this={codeTextareaElement}
+					bind:value={outputCode}
+					placeholder="Your code will appear here..."
+					class="min-h-32 w-full resize-none overflow-hidden rounded-lg bg-gray-800 p-4 font-mono text-sm leading-relaxed text-white transition-colors focus:outline-none"
+					rows="1"
+					readonly
+				></textarea>
+			</div>
+		{/if}
 	</div>
 </div>
