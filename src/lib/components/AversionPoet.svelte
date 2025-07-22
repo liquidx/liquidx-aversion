@@ -99,7 +99,9 @@
 		statusMessage = 'Generating Code...';
 		try {
 			const codePrompt = `Read the following poem and generate javascript code that does that represents what this poem is describing 
-to the best of your ability. Output just the code with no comments, no html and no explanation. 
+to the best of your ability. 
+Do not only output the poem to console or to the screen, use the meaning of the poem to determine what javascript code it is describing. 
+Output just the code with no comments, no html and no explanation. 
 Output valid javascript code as a single function with the function name "run". 
 This code should be executable in the browser javascript interpreter.
 Do not use any markdown, only output javascript code.
