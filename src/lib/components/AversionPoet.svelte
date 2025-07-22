@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { fibonacci, threeJsCube, binarySearch, recursiveFactorial, promiseChain, bubbleSort } from '../code-snippets';
+	import {
+		fibonacci,
+		threeJsCube,
+		binarySearch,
+		recursiveFactorial,
+		promiseChain,
+		bubbleSort
+	} from '../code-snippets';
 
 	let inputText = '';
 	let outputPoem = '';
@@ -9,6 +16,20 @@
 	let statusMessage = 'Convert';
 	let textareaElement: HTMLTextAreaElement;
 	let codeTextareaElement: HTMLTextAreaElement;
+	let selectedPoet = 'T.S. Eliot';
+
+	const poetOptions = [
+		{ value: 'T.S. Eliot', label: 'T.S. Eliot' },
+		{ value: 'Mary Oliver', label: 'Mary Oliver' },
+		{ value: 'Walt Whitman', label: 'Walt Whitman' }
+	];
+
+	function resetToStart() {
+		currentState = 'input';
+		outputPoem = '';
+		outputCode = '';
+		statusMessage = 'Convert';
+	}
 
 	// UI States: 'input' | 'poem' | 'code'
 	let currentState: 'input' | 'poem' | 'code' = 'input';
@@ -41,7 +62,7 @@
 
 		statusMessage = 'Converting to Poem...';
 		try {
-			const poemPrompt = `Read the follow code and write a poem in the style of TS Eliot that describes what the code does. Only output the poem and nothing else: ${inputText}`;
+			const poemPrompt = `Read the following code and write a poem in the style of ${selectedPoet} that describes what the code does. Only output the poem and nothing else: ${inputText}`;
 			const poemResponse = await fetch('/api/gemini/generate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -77,7 +98,7 @@
 
 		statusMessage = 'Generating Code...';
 		try {
-			const codePrompt = `Return the following poem and generate javascript code that does that this describes 
+			const codePrompt = `Read the following poem and generate javascript code that does that represents what this poem is describing 
 to the best of your ability. Output just the code with no comments, no html and no explanation. 
 Output valid javascript code as a single function with the function name "run". 
 This code should be executable in the browser javascript interpreter.
@@ -113,6 +134,19 @@ ${outputPoem}`;
 <div class="max-w-3xl p-8 md:p-4">
 	<div class="flex flex-col gap-8 text-sm md:gap-6">
 		{#if currentState === 'input'}
+			<!-- Poet Style Selector -->
+			<div class="flex flex-col gap-2">
+				<h3 class="m-0 font-semibold text-gray-700">Poet Style</h3>
+				<select
+					bind:value={selectedPoet}
+					class="w-fit rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 transition-colors focus:ring-2 focus:ring-purple-500 focus:outline-none"
+				>
+					{#each poetOptions as option}
+						<option value={option.value}>{option.label}</option>
+					{/each}
+				</select>
+			</div>
+
 			<!-- Input Text Box -->
 			<div class="flex flex-col gap-2">
 				<h3 class="m-0 font-semibold text-gray-700">Input Code</h3>
@@ -202,7 +236,7 @@ ${outputPoem}`;
 					class="w-full rounded-lg p-4 font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-300">{outputPoem}
 				</pre>
 				<pre
-					class="w-full rounded-lg p-4 font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-300">- G. Emini, 2025</pre>
+					class="w-full rounded-lg p-4 font-serif text-lg leading-relaxed whitespace-pre-wrap text-gray-300">- A.I. {selectedPoet}, 2025</pre>
 			</div>
 
 			<!-- Convert to Code Button -->
@@ -236,6 +270,16 @@ ${outputPoem}`;
 					rows="1"
 					readonly
 				></textarea>
+			</div>
+
+			<!-- Start Over Button -->
+			<div class="flex items-center justify-start py-4">
+				<button
+					on:click={resetToStart}
+					class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-none bg-gradient-to-r from-gray-500 to-gray-600 px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:translate-y-[-2px] hover:shadow-lg active:translate-y-0"
+				>
+					Start Over
+				</button>
 			</div>
 		{/if}
 	</div>
