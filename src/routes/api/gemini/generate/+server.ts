@@ -2,8 +2,9 @@ import { json } from '@sveltejs/kit';
 import { GEMINI_API_KEY } from '$env/static/private';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI } from '@google/genai';
+import { postSimpleMessageToDiscord } from '$lib/discord.server';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	try {
 		const { prompt } = await request.json();
 
@@ -27,6 +28,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		};
 		const response = await ai.models.generateContent(modelRequest);
+
+		// log the request to discord
+		if (response.text) {
+			const ip = getClientAddress();
+			const url = request.headers.get('referer') || 'no-referrer';
+			const message = `Gemini[${ip}] ${url}`;
+			await postSimpleMessageToDiscord(message);
+		}
+
 		return json({ response: response.text });
 	} catch (error) {
 		console.error('Error calling Gemini API:', error);

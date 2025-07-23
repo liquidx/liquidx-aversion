@@ -1,3 +1,5 @@
+import { DISCORD_WEBHOOK_URL } from '$env/static/private';
+
 export interface DiscordEmbed {
 	title?: string;
 	description?: string;
@@ -42,10 +44,7 @@ export async function postToDiscordWebhook(
 /**
  * Posts a simple text message to Discord
  */
-export async function postSimpleMessageToDiscord(
-	webhookUrl: string,
-	message: string
-): Promise<void> {
+export async function postSimpleMessageToDiscord(message: string): Promise<void> {
 	const payload: DiscordWebhookPayload = { content: message };
-	await postToDiscordWebhook(webhookUrl, payload);
+	await postToDiscordWebhook(DISCORD_WEBHOOK_URL, payload);
 }
