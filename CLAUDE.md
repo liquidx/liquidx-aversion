@@ -37,6 +37,7 @@ This is a SvelteKit 2.0 application with the following key characteristics:
 ### Testing Configuration
 
 The project uses Vitest with two separate test configurations:
+
 - **Client tests**: Run in browser environment (Playwright/Chromium) for .svelte test files
 - **Server tests**: Run in Node.js environment for regular .ts/.js test files
 
@@ -45,3 +46,19 @@ The project uses Vitest with two separate test configurations:
 - `svelte.config.js` - Svelte/SvelteKit configuration with MDSvex preprocessing
 - `vite.config.ts` - Vite configuration with Tailwind and test setup
 - `tsconfig.json` - TypeScript configuration extending SvelteKit defaults
+
+## Plan & review
+
+### Before starting work
+
+- Always start in plan mode to make a plan.
+- After completing the plan, write the plan in .claude/tasks/TASK_NAME.md
+- The plan should contain detailed implementation plan, the reasoning behind the plan and the tasks that are brokwn down.
+- If the task require external knowledge or certain package, also research ot get the latest knowledge (Use Task Tool for research)
+- Do not over plan, always think of the minimum viable product.
+- Once you write the plan, first ask me to review it. Do no continue until I approve the plan.
+
+## While working
+
+- You should update the plan as you work.
+- After you complete tasks in the plan, you should update and append detailed descriptions of the changes you made so following tasks can be easily handed over to other engineers.
