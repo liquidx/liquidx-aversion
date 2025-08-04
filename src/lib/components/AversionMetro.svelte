@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import ModeButton from './ModeButton.svelte';
 
 	interface Station {
 		id: string;
@@ -476,48 +477,62 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="metro-editor">
-	<div class="toolbar">
-		<div class="tool-group">
-			<button class:active={selectedTool === 'add'} onclick={() => (selectedTool = 'add')}>
+<div class="flex flex-col gap-6 p-6 max-w-4xl bg-slate-100 min-h-screen">
+	<div class="flex gap-4 items-center p-6 bg-white border border-slate-200 rounded-lg shadow-sm flex-wrap">
+		<div class="flex gap-2 items-center">
+			<ModeButton active={selectedTool === 'add'} onclick={() => (selectedTool = 'add')}>
 				Add Mode
-			</button>
-			<button class:active={selectedTool === 'connect'} onclick={() => (selectedTool = 'connect')}>
+			</ModeButton>
+			<ModeButton active={selectedTool === 'connect'} onclick={() => (selectedTool = 'connect')}>
 				Connect Mode
-			</button>
-			<button class:active={selectedTool === 'select'} onclick={() => (selectedTool = 'select')}>
+			</ModeButton>
+			<ModeButton active={selectedTool === 'select'} onclick={() => (selectedTool = 'select')}>
 				Select Mode
-			</button>
+			</ModeButton>
 		</div>
 
-		<div class="tool-group">
-			<label>
+		<div class="flex gap-2 items-center">
+			<label class="flex items-center gap-2 text-sm font-medium text-slate-900">
 				Line Color:
-				<input type="color" bind:value={selectedColor} />
+				<input type="color" bind:value={selectedColor} class="w-10 h-9 border border-slate-200 rounded-md cursor-pointer bg-white" />
 			</label>
 		</div>
 
 		{#if selectedTool === 'connect'}
-			<div class="tool-group">
-				<button onclick={connectSelectedStations} disabled={selectedStations.length < 2}>
+			<div class="flex gap-2 items-center">
+				<button 
+					onclick={connectSelectedStations} 
+					disabled={selectedStations.length < 2}
+					class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+				>
 					Connect Stations ({selectedStations.length})
 				</button>
 			</div>
 		{/if}
 
-		<div class="tool-group">
-			<button onclick={deleteSelectedStations} disabled={selectedStations.length === 0}>
+		<div class="flex gap-2 items-center">
+			<button 
+				onclick={deleteSelectedStations} 
+				disabled={selectedStations.length === 0}
+				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+			>
 				Delete Selected
 			</button>
 		</div>
 
-		<div class="tool-group">
-			<button onclick={undo} disabled={!canUndo()}> Undo </button>
+		<div class="flex gap-2 items-center">
+			<button 
+				onclick={undo} 
+				disabled={!canUndo()}
+				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+			>
+				Undo
+			</button>
 		</div>
 
 		{#if selectedLine}
-			<div class="tool-group">
-				<label>
+			<div class="flex gap-2 items-center">
+				<label class="flex items-center gap-2 text-sm font-medium text-slate-900">
 					Change Line Color:
 					<input
 						type="color"
@@ -526,16 +541,22 @@
 							selectedLine &&
 							e.target &&
 							changeLineColor(selectedLine, (e.target as HTMLInputElement).value)}
+						class="w-10 h-9 border border-slate-200 rounded-md cursor-pointer bg-white"
 					/>
 				</label>
 			</div>
-			<div class="tool-group">
-				<button onclick={deleteSelectedLine} class="delete-button"> Delete Line </button>
+			<div class="flex gap-2 items-center">
+				<button 
+					onclick={deleteSelectedLine} 
+					class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 h-9 px-3 bg-red-600 text-white border-red-600 hover:bg-red-700 hover:border-red-700"
+				>
+					Delete Line
+				</button>
 			</div>
 		{/if}
 	</div>
 
-	<div class="svg-container">
+	<div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<svg
@@ -549,6 +570,7 @@
 			onmousedown={handleSvgMouseDown}
 			onmousemove={handleSvgMouseMove}
 			onmouseup={handleSvgMouseUp}
+			class="block cursor-crosshair select-none"
 		>
 			<!-- Dynamic Grid lines -->
 			<!-- Vertical grid lines -->
@@ -649,41 +671,42 @@
 		</svg>
 	</div>
 
-	<div class="instructions">
-		<p><strong>Instructions:</strong></p>
-		<ul>
-			<li><strong>Add Mode</strong>: Click anywhere to add stations, click existing stations to select them</li>
-			<li><strong>Connect Mode</strong>: Click stations to select multiple, then "Connect Stations" to draw lines</li>
-			<li><strong>Select Mode</strong>: Drag stations to move them, click lines to select and edit them</li>
-			<li>Drag on empty space to pan around the infinite canvas</li>
-			<li>In Select mode, click on a line to change its color or delete it</li>
-			<li>
+	<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+		<p class="mb-4 font-semibold text-slate-900 text-base">Instructions:</p>
+		<ul class="space-y-2 pl-5 list-disc">
+			<li class="text-slate-700 text-sm leading-relaxed"><strong>Add Mode</strong>: Click anywhere to add stations, click existing stations to select them</li>
+			<li class="text-slate-700 text-sm leading-relaxed"><strong>Connect Mode</strong>: Click stations to select multiple, then "Connect Stations" to draw lines</li>
+			<li class="text-slate-700 text-sm leading-relaxed"><strong>Select Mode</strong>: Drag stations to move them, click lines to select and edit them</li>
+			<li class="text-slate-700 text-sm leading-relaxed">Drag on empty space to pan around the infinite canvas</li>
+			<li class="text-slate-700 text-sm leading-relaxed">In Select mode, click on a line to change its color or delete it</li>
+			<li class="text-slate-700 text-sm leading-relaxed">
 				Interchange stations (white with black border) appear automatically when connected to
 				multiple lines
 			</li>
-			<li>Press Delete to remove selected stations or lines</li>
-			<li>Use "Undo" button or Ctrl+Z (Cmd+Z on Mac) to reverse the last action</li>
+			<li class="text-slate-700 text-sm leading-relaxed">Press Delete to remove selected stations or lines</li>
+			<li class="text-slate-700 text-sm leading-relaxed">Use "Undo" button or Ctrl+Z (Cmd+Z on Mac) to reverse the last action</li>
 		</ul>
 	</div>
 
 	{#if selectedStations.length > 0}
-		<div class="selected-info">
-			<h3>Selected Stations:</h3>
+		<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+			<h3 class="mb-4 font-semibold text-slate-900 text-base">Selected Stations:</h3>
 			{#each selectedStations as stationId}
 				{@const station = stations.find((s) => s.id === stationId)}
 				{#if station}
-					<div class="station-info">
+					<div class="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
 						{#if editingStation === stationId}
 							<input
 								bind:value={editingStationName}
 								onblur={saveStationName}
 								onkeydown={(e) => e.key === 'Enter' && saveStationName()}
+								class="border border-slate-200 bg-white px-3 py-1.5 text-sm rounded-md text-slate-900 w-full transition-colors focus:outline-none focus:border-blue-500 focus:border-2"
 							/>
 						{:else}
 							<button
 								type="button"
 								onclick={() => startEditingStation(stationId)}
-								class="station-name-button"
+								class="bg-transparent border-none p-2 font-inherit cursor-pointer text-left w-full rounded transition-colors hover:bg-slate-100 text-slate-900"
 							>
 								{station.name}
 							</button>
@@ -696,241 +719,15 @@
 
 	{#if selectedLine}
 		{@const line = lines.find((l) => l.id === selectedLine)}
-		<div class="selected-info">
-			<h3>Selected Line:</h3>
+		<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+			<h3 class="mb-4 font-semibold text-slate-900 text-base">Selected Line:</h3>
 			{#if line}
-				<div class="line-info">
-					<div class="line-color-preview" style="background-color: {line.color}"></div>
-					<span>Line with {line.stations.length} stations</span>
+				<div class="flex items-center gap-3 mb-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
+					<div class="w-5 h-5 rounded-full border-2 border-slate-400 shadow-sm" style="background-color: {line.color}"></div>
+					<span class="text-slate-700 text-sm">Line with {line.stations.length} stations</span>
 				</div>
 			{/if}
 		</div>
 	{/if}
 </div>
 
-<style>
-	.metro-editor {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-		padding: 1.5rem;
-		max-width: 800px;
-		margin: 0;
-		background-color: hsl(210 11% 96%);
-		min-height: 100vh;
-	}
-
-	.toolbar {
-		display: flex;
-		gap: 1rem;
-		align-items: center;
-		padding: 1.5rem;
-		background-color: hsl(0 0% 100%);
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.5rem;
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-		flex-wrap: wrap;
-	}
-
-	.tool-group {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	button {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		white-space: nowrap;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 150ms;
-		height: 2.25rem;
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		background-color: hsl(0 0% 100%);
-		color: hsl(222.2 84% 4.9%);
-		cursor: pointer;
-	}
-
-	button:hover {
-		background-color: hsl(210 40% 98%);
-		color: hsl(222.2 84% 4.9%);
-	}
-
-	button.active {
-		background-color: hsl(222.2 47.4% 11.2%);
-		color: hsl(210 40% 98%);
-		border-color: hsl(222.2 47.4% 11.2%);
-	}
-
-	button.active:hover {
-		background-color: hsl(222.2 47.4% 11.2%);
-		opacity: 0.9;
-	}
-
-	button:disabled {
-		pointer-events: none;
-		opacity: 0.5;
-	}
-
-	.svg-container {
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.5rem;
-		overflow: hidden;
-		background-color: hsl(0 0% 100%);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	}
-
-	svg {
-		display: block;
-		cursor: crosshair;
-		user-select: none;
-		-webkit-user-select: none;
-		-moz-user-select: none;
-		-ms-user-select: none;
-	}
-
-	.instructions {
-		background-color: hsl(0 0% 100%);
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.5rem;
-		padding: 1.5rem;
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	}
-
-	.instructions p {
-		margin: 0 0 1rem 0;
-		font-weight: 600;
-		color: hsl(222.2 84% 4.9%);
-		font-size: 0.875rem;
-		line-height: 1.25rem;
-	}
-
-	.instructions ul {
-		margin: 0;
-		padding-left: 1.5rem;
-	}
-
-	.instructions li {
-		margin: 0.5rem 0;
-		color: hsl(215.4 16.3% 46.9%);
-		font-size: 0.875rem;
-		line-height: 1.25rem;
-	}
-
-	.selected-info {
-		background-color: hsl(0 0% 100%);
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.5rem;
-		padding: 1.5rem;
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	}
-
-	.selected-info h3 {
-		margin: 0 0 1rem 0;
-		font-weight: 600;
-		color: hsl(222.2 84% 4.9%);
-		font-size: 0.875rem;
-		line-height: 1.25rem;
-	}
-
-	.station-info {
-		margin: 0.75rem 0;
-		padding: 0.75rem;
-		background-color: hsl(210 40% 98%);
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.375rem;
-	}
-
-	.station-info input {
-		flex: 1;
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		background-color: hsl(0 0% 100%);
-		padding: 0.5rem 0.75rem;
-		font-size: 0.875rem;
-		border-radius: 0.375rem;
-		color: hsl(222.2 84% 4.9%);
-		width: 100%;
-		transition-property: border-color;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 150ms;
-	}
-
-	.station-info input:focus {
-		outline: 2px solid transparent;
-		outline-offset: 2px;
-		border-color: hsl(221.2 83.2% 53.3%);
-	}
-
-	.station-name-button {
-		background: none;
-		border: none;
-		padding: 0.5rem;
-		font: inherit;
-		cursor: pointer;
-		text-align: left;
-		width: 100%;
-		border-radius: 0.25rem;
-		transition-property: background-color;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 150ms;
-		color: hsl(222.2 84% 4.9%);
-	}
-
-	.station-name-button:hover {
-		background-color: hsl(210 40% 96%);
-	}
-
-	.line-info {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin: 0.75rem 0;
-		padding: 0.75rem;
-		background-color: hsl(210 40% 98%);
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.375rem;
-	}
-
-	.line-color-preview {
-		width: 1.25rem;
-		height: 1.25rem;
-		border-radius: 50%;
-		border: 2px solid hsl(214.3 31.8% 91.4%);
-	}
-
-	label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: hsl(222.2 84% 4.9%);
-	}
-
-	input[type='color'] {
-		width: 2.5rem;
-		height: 2.25rem;
-		border: 1px solid hsl(214.3 31.8% 91.4%);
-		border-radius: 0.375rem;
-		cursor: pointer;
-		background-color: hsl(0 0% 100%);
-	}
-
-	.delete-button {
-		background-color: hsl(0 84.2% 60.2%);
-		color: hsl(210 40% 98%);
-		border-color: hsl(0 84.2% 60.2%);
-	}
-
-	.delete-button:hover {
-		background-color: hsl(0 84.2% 60.2%);
-		opacity: 0.9;
-	}
-</style>
