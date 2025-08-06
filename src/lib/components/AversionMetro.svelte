@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import ModeButton from './ModeButton.svelte';
 	import ColorSelector from './ColorSelector.svelte';
+	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X } from '@lucide/svelte';
 
 	interface Station {
 		id: string;
@@ -10,6 +10,7 @@
 		name: string;
 		isInterchange: boolean;
 		lines: string[];
+		color: string;
 	}
 
 	interface Line {
@@ -30,7 +31,6 @@
 	let lines: Line[] = $state([]);
 	let connections: Connection[] = $state([]);
 	let selectedTool: 'station' | 'line' = $state('station');
-	let selectedColor = $state('#0066cc');
 	let selectedStations: string[] = $state([]);
 	let editingStation: string | null = $state(null);
 	let editingStationName = $state('');
@@ -41,6 +41,8 @@
 	let panning = $state(false);
 	let panStart = $state({ x: 0, y: 0 });
 	let hasPanned = $state(false);
+	let showColorPicker = $state(false);
+	let pendingConnection = $state(false);
 
 	const GRID_SIZE = 40;
 	const STATION_RADIUS = 8;
@@ -87,23 +89,23 @@
 	// Reactive grid lines based on viewBox
 	let gridLines = $derived.by(() => {
 		const lines = { x: [] as number[], y: [] as number[] };
-		
+
 		// Calculate the grid bounds that are visible in the current viewBox
 		const startX = Math.floor(viewBox.x / GRID_SIZE) * GRID_SIZE;
 		const endX = Math.ceil((viewBox.x + viewBox.width) / GRID_SIZE) * GRID_SIZE;
 		const startY = Math.floor(viewBox.y / GRID_SIZE) * GRID_SIZE;
 		const endY = Math.ceil((viewBox.y + viewBox.height) / GRID_SIZE) * GRID_SIZE;
-		
+
 		// Generate vertical lines
 		for (let x = startX; x <= endX; x += GRID_SIZE) {
 			lines.x.push(x);
 		}
-		
+
 		// Generate horizontal lines
 		for (let y = startY; y <= endY; y += GRID_SIZE) {
 			lines.y.push(y);
 		}
-		
+
 		return lines;
 	});
 
@@ -155,9 +157,9 @@
 
 		const [worldX, worldY] = screenToWorld(event.clientX, event.clientY);
 		const [gridX, gridY] = snapToGrid(worldX, worldY);
-		
+
 		const clickedStation = findStationAt(worldX, worldY);
-		
+
 		if (clickedStation) {
 			// Clicked on an existing station
 			if (selectedTool === 'line') {
@@ -287,7 +289,8 @@
 			y,
 			name: `Station ${stations.length + 1}`,
 			isInterchange: false,
-			lines: []
+			lines: [],
+			color: '#000000'
 		};
 
 		stations = [...stations, newStation];
@@ -368,13 +371,21 @@
 
 	function connectSelectedStations() {
 		if (selectedStations.length < 2) return;
+		
+		// Show color picker instead of immediately connecting
+		showColorPicker = true;
+		pendingConnection = true;
+	}
+
+	function confirmConnection(color: string) {
+		if (!pendingConnection || selectedStations.length < 2) return;
 
 		saveState();
 
 		const lineId = `line-${Date.now()}`;
 		const newLine: Line = {
 			id: lineId,
-			color: selectedColor,
+			color: color,
 			stations: [...selectedStations]
 		};
 
@@ -393,6 +404,11 @@
 			const station = stations.find((s) => s.id === stationId);
 			if (station) {
 				station.lines = [...station.lines, lineId];
+				// Set station color to the line color if it's the first line
+				if (station.lines.length === 1) {
+					station.color = color;
+				}
+				// Mark as interchange if connected to multiple lines
 				if (station.lines.length > 1) {
 					station.isInterchange = true;
 				}
@@ -400,6 +416,26 @@
 		});
 
 		selectedStations = [];
+		showColorPicker = false;
+		pendingConnection = false;
+	}
+
+	function cancelConnection() {
+		showColorPicker = false;
+		pendingConnection = false;
+	}
+
+	function handlePopoverClickOutside(event: MouseEvent) {
+		if (showColorPicker) {
+			const target = event.target as HTMLElement;
+			const popover = target.closest('.color-popover');
+			const connectButton = target.closest('[data-connect-button]');
+			
+			// Don't close if clicking inside the popover or on the connect button
+			if (!popover && !connectButton) {
+				cancelConnection();
+			}
+		}
 	}
 
 	function startEditingStation(stationId: string) {
@@ -440,6 +476,14 @@
 		if (line && line.color !== newColor) {
 			saveState();
 			line.color = newColor;
+			
+			// Update station colors for all stations on this line
+			stations.forEach((station) => {
+				// If this station's color should be updated (it's on this line and this is its primary line)
+				if (station.lines.includes(lineId) && station.lines[0] === lineId) {
+					station.color = newColor;
+				}
+			});
 		}
 	}
 
@@ -451,10 +495,25 @@
 		// Remove connections for this line
 		connections = connections.filter((c) => c.lineId !== selectedLine);
 
-		// Remove line from stations and update interchange status
+		// Remove line from stations and update interchange status and colors
 		stations.forEach((station) => {
+			const wasConnectedToLine = station.lines.includes(selectedLine!);
 			station.lines = station.lines.filter((lineId) => lineId !== selectedLine);
 			station.isInterchange = station.lines.length > 1;
+			
+			// Update station color if this was the line providing its color
+			if (wasConnectedToLine) {
+				if (station.lines.length === 0) {
+					// No lines left, revert to black
+					station.color = '#000000';
+				} else {
+					// Use color from remaining first line
+					const firstLine = lines.find(line => line.id === station.lines[0]);
+					if (firstLine) {
+						station.color = firstLine.color;
+					}
+				}
+			}
 		});
 
 		// Remove the line
@@ -508,6 +567,19 @@
 				stations = mapData.stations || [];
 				lines = mapData.lines || [];
 				connections = mapData.connections || [];
+				
+				// Ensure all stations have a color property for backward compatibility
+				stations.forEach(station => {
+					if (!station.color) {
+						// If station has lines, use the color of the first line
+						if (station.lines && station.lines.length > 0) {
+							const firstLine = lines.find(line => line.id === station.lines[0]);
+							station.color = firstLine ? firstLine.color : '#000000';
+						} else {
+							station.color = '#000000';
+						}
+					}
+				});
 				if (mapData.viewBox) {
 					viewBox = mapData.viewBox;
 				}
@@ -544,136 +616,201 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:click={handlePopoverClickOutside} />
 
-<div class="flex flex-col gap-6 p-6 max-w-4xl bg-slate-100 min-h-screen">
-	<div class="flex gap-4 items-center p-6 bg-white border border-slate-200 rounded-lg shadow-sm flex-wrap">
-		<div class="flex gap-2 items-center">
+<div class="flex min-h-screen max-w-4xl flex-col gap-6 p-6 text-xs">
+	<div class="flex flex-wrap items-center gap-4 p-6">
+		<div class="flex items-center gap-2">
 			<ModeButton active={selectedTool === 'station'} onclick={() => (selectedTool = 'station')}>
-				Station Mode
+				<MapPin size={18} />
 			</ModeButton>
 			<ModeButton active={selectedTool === 'line'} onclick={() => (selectedTool = 'line')}>
-				Line Mode
+				<Route size={18} />
 			</ModeButton>
 		</div>
 
-		<div class="flex gap-2 items-center">
-			<ColorSelector 
-				value={selectedColor} 
-				onchange={(color) => selectedColor = color}
-				label="Line Color"
-			/>
-		</div>
 
 		{#if selectedTool === 'line'}
-			<div class="flex gap-2 items-center">
-				<button 
-					onclick={connectSelectedStations} 
+			<div class="relative flex items-center gap-2">
+				<button
+					onclick={connectSelectedStations}
 					disabled={selectedStations.length < 2}
-					class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+					data-connect-button
+					class="inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 {selectedStations.length >=
+					2
+						? 'border-green-500 bg-green-500 text-white hover:bg-green-600'
+						: 'border-slate-600 bg-slate-700 text-slate-500'}"
+					title="Connect Stations ({selectedStations.length})"
 				>
-					Connect Stations ({selectedStations.length})
+					<Link2 size={18} />
 				</button>
+				
+				<!-- Color Picker Popover -->
+				{#if showColorPicker}
+					<div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-50">
+						<div class="color-popover rounded-lg border border-slate-600 bg-slate-800 p-4 shadow-xl">
+							<div class="mb-3 flex items-center justify-between">
+								<h3 class="text-sm font-semibold text-white">Choose Color</h3>
+								<button
+									onclick={cancelConnection}
+									class="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-700 hover:text-white"
+								>
+									<X size={14} />
+								</button>
+							</div>
+							<div class="mb-3">
+								<p class="text-xs text-slate-300">
+									{selectedStations.length} stations
+								</p>
+							</div>
+							<div class="grid grid-cols-6 gap-2 w-48">
+								{#each [
+									{ name: 'Red', hex: '#ef4444' },
+									{ name: 'Orange', hex: '#f97316' },
+									{ name: 'Amber', hex: '#f59e0b' },
+									{ name: 'Yellow', hex: '#eab308' },
+									{ name: 'Lime', hex: '#84cc16' },
+									{ name: 'Green', hex: '#22c55e' },
+									{ name: 'Emerald', hex: '#10b981' },
+									{ name: 'Teal', hex: '#14b8a6' },
+									{ name: 'Cyan', hex: '#06b6d4' },
+									{ name: 'Sky', hex: '#0ea5e9' },
+									{ name: 'Blue', hex: '#3b82f6' },
+									{ name: 'Indigo', hex: '#6366f1' },
+									{ name: 'Violet', hex: '#8b5cf6' },
+									{ name: 'Purple', hex: '#a855f7' },
+									{ name: 'Fuchsia', hex: '#d946ef' },
+									{ name: 'Pink', hex: '#ec4899' },
+									{ name: 'Rose', hex: '#f43f5e' },
+									{ name: 'Slate', hex: '#64748b' }
+								] as color}
+									<button
+										onclick={() => confirmConnection(color.hex)}
+										title={color.name}
+										aria-label="Select {color.name} color"
+										class="h-7 w-7 rounded-full border-2 border-slate-600 transition-all hover:scale-110 hover:border-white focus:border-white focus:outline-none"
+										style="background-color: {color.hex}"
+									>
+									</button>
+								{/each}
+							</div>
+							<!-- Popover arrow -->
+							<div class="absolute top-full left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-slate-800 border-r border-b border-slate-600"></div>
+						</div>
+					</div>
+				{/if}
 			</div>
 		{/if}
 
-		<div class="flex gap-2 items-center">
-			<button 
-				onclick={deleteSelectedStations} 
+		<div class="flex items-center gap-2">
+			<button
+				onclick={deleteSelectedStations}
 				disabled={selectedStations.length === 0}
-				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+				class="inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 {selectedStations.length >
+				0
+					? 'border-red-500 bg-red-500 text-white hover:bg-red-600'
+					: 'border-slate-600 bg-slate-700 text-slate-500'}"
+				title="Delete Selected"
 			>
-				Delete Selected
+				<Trash2 size={18} />
 			</button>
 		</div>
 
-		<div class="flex gap-2 items-center">
-			<button 
-				onclick={undo} 
+		<div class="flex items-center gap-2">
+			<button
+				onclick={undo}
 				disabled={!canUndo()}
-				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900"
+				class="inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 {canUndo()
+					? 'border-slate-600 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+					: 'border-slate-600 bg-slate-700 text-slate-500'}"
+				title="Undo"
 			>
-				Undo
+				<Undo2 size={18} />
 			</button>
 		</div>
 
-		<div class="flex gap-2 items-center">
-			<button 
+		<div class="flex items-center gap-2">
+			<button
 				onclick={saveMapToFile}
-				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+				class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-700 text-slate-300 transition-colors duration-150 hover:bg-slate-600 hover:text-white"
+				title="Save Map"
 			>
-				Save Map
+				<Save size={18} />
 			</button>
-			<input 
-				type="file" 
-				accept=".json" 
+			<input
+				type="file"
+				accept=".json"
 				onchange={loadMapFromFile}
 				style="display: none;"
 				bind:this={fileInput}
 			/>
-			<button 
+			<button
 				onclick={() => fileInput?.click()}
-				class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+				class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-700 text-slate-300 transition-colors duration-150 hover:bg-slate-600 hover:text-white"
+				title="Load Map"
 			>
-				Load Map
+				<FolderOpen size={18} />
 			</button>
 		</div>
 
 		{#if editingStation}
 			{@const station = stations.find((s) => s.id === editingStation)}
 			{#if station}
-				<div class="flex gap-2 items-center">
-					<label for="station-name-input" class="text-sm font-medium text-slate-900">Station Name:</label>
+				<div class="flex items-center gap-2">
+					<label for="station-name-input" class="text-sm font-medium text-white"
+						>Station Name:</label
+					>
 					<input
 						id="station-name-input"
 						bind:value={editingStationName}
 						onblur={saveStationName}
 						onkeydown={(e) => e.key === 'Enter' && saveStationName()}
-						class="border border-slate-200 bg-white px-3 py-1.5 text-sm rounded-md text-slate-900 w-48 transition-colors focus:outline-none focus:border-blue-500 focus:border-2"
+						class="w-48 rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white transition-colors placeholder:text-slate-400 focus:border-2 focus:border-blue-500 focus:outline-none"
 						placeholder="Enter station name"
 					/>
-					<button 
+					<button
 						onclick={saveStationName}
-						class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+						class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-700 text-slate-300 transition-colors duration-150 hover:bg-slate-600 hover:text-white"
+						title="Save"
 					>
-						Save
+						<Save size={16} />
 					</button>
 				</div>
 			{/if}
 		{:else if selectedStations.length === 1}
 			{@const station = stations.find((s) => s.id === selectedStations[0])}
 			{#if station}
-				<div class="flex gap-2 items-center">
-					<span class="text-sm font-medium text-slate-900">Selected Station:</span>
+				<div class="flex items-center gap-2">
+					<span class="text-sm font-medium text-white">Selected Station:</span>
 					<button
 						type="button"
 						onclick={() => startEditingStation(station.id)}
-						class="px-3 py-1.5 text-sm rounded-md bg-slate-50 border border-slate-200 text-slate-900 hover:bg-slate-100 transition-colors"
+						class="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white transition-colors hover:bg-slate-600"
 					>
 						{station.name}
 					</button>
 				</div>
 			{/if}
 		{:else if selectedLine}
-			<div class="flex gap-2 items-center">
-				<ColorSelector 
+			<div class="flex items-center gap-2">
+				<ColorSelector
 					value={lines.find((l) => l.id === selectedLine)?.color || '#3b82f6'}
 					onchange={(color) => selectedLine && changeLineColor(selectedLine, color)}
-					label="Change Line Color"
 				/>
 			</div>
-			<div class="flex gap-2 items-center">
-				<button 
-					onclick={deleteSelectedLine} 
-					class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 bg-red-600 text-white border-red-600 hover:bg-red-700 hover:border-red-700"
+			<div class="flex items-center gap-2">
+				<button
+					onclick={deleteSelectedLine}
+					class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-500 bg-red-500 text-white transition-colors duration-150 hover:bg-red-600"
+					title="Delete Line"
 				>
-					Delete Line
+					<Trash2 size={18} />
 				</button>
 			</div>
 		{/if}
 	</div>
 
-	<div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+	<div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<svg
@@ -701,7 +838,7 @@
 					stroke-width="1"
 				/>
 			{/each}
-			
+
 			<!-- Horizontal grid lines -->
 			{#each gridLines.y as y}
 				<line
@@ -780,7 +917,8 @@
 					text-anchor="middle"
 					font-family="Arial"
 					font-size="12"
-					fill="black"
+					font-weight="bold"
+					fill={station.color}
 				>
 					{station.name}
 				</text>
@@ -788,33 +926,45 @@
 		</svg>
 	</div>
 
-	<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-		<p class="mb-4 font-semibold text-slate-900 text-base">Instructions:</p>
-		<ul class="space-y-2 pl-5 list-disc">
-			<li class="text-slate-700 text-sm leading-relaxed"><strong>Station Mode</strong>: Click anywhere to add stations, click existing stations to select/drag them, click lines to select them</li>
-			<li class="text-slate-700 text-sm leading-relaxed"><strong>Line Mode</strong>: Click stations to select multiple, then "Connect Stations" to draw lines, or click lines to select them</li>
-			<li class="text-slate-700 text-sm leading-relaxed">Drag on empty space to pan around the infinite canvas</li>
-			<li class="text-slate-700 text-sm leading-relaxed">In Select mode, click on a line to change its color or delete it</li>
-			<li class="text-slate-700 text-sm leading-relaxed">
+	<div class="p-6">
+		<p class="mb-4 text-base font-semibold">Instructions:</p>
+		<ul class="list-disc space-y-2 pl-5">
+			<li class="text-xs leading-relaxed">
+				<strong>Station Mode</strong>: Click anywhere to add stations, click existing stations to
+				select/drag them, click lines to select them
+			</li>
+			<li class="text-xs leading-relaxed">
+				<strong>Line Mode</strong>: Click stations to select multiple, then click "Connect" to
+				choose a color and draw lines, or click lines to select them
+			</li>
+			<li class="text-xs leading-relaxed">Drag on empty space to pan around the infinite canvas</li>
+			<li class="text-xs leading-relaxed">
+				In Select mode, click on a line to change its color or delete it
+			</li>
+			<li class="text-xs leading-relaxed">
 				Interchange stations (white with black border) appear automatically when connected to
 				multiple lines
 			</li>
-			<li class="text-slate-700 text-sm leading-relaxed">Press Delete to remove selected stations or lines</li>
-			<li class="text-slate-700 text-sm leading-relaxed">Use "Undo" button or Ctrl+Z (Cmd+Z on Mac) to reverse the last action</li>
+			<li class="text-xs leading-relaxed">Press Delete to remove selected stations or lines</li>
+			<li class="text-xs leading-relaxed">
+				Use "Undo" button or Ctrl+Z (Cmd+Z on Mac) to reverse the last action
+			</li>
 		</ul>
 	</div>
 
 	{#if selectedStations.length > 1}
-		<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-			<h3 class="mb-4 font-semibold text-slate-900 text-base">Selected Stations ({selectedStations.length}):</h3>
+		<div class="rounded-lg border border-slate-600 bg-slate-800 p-6 shadow-sm">
+			<h3 class="mb-4 text-xs font-semibold text-white">
+				Selected Stations ({selectedStations.length}):
+			</h3>
 			{#each selectedStations as stationId}
 				{@const station = stations.find((s) => s.id === stationId)}
 				{#if station}
-					<div class="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
+					<div class="mb-3 rounded-md border border-slate-600 bg-slate-700 p-3">
 						<button
 							type="button"
 							onclick={() => startEditingStation(stationId)}
-							class="bg-transparent border-none p-2 font-inherit cursor-pointer text-left w-full rounded transition-colors hover:bg-slate-100 text-slate-900"
+							class="font-inherit w-full cursor-pointer rounded border-none bg-transparent p-2 text-left text-white transition-colors hover:bg-slate-600"
 						>
 							{station.name}
 						</button>
@@ -826,15 +976,19 @@
 
 	{#if selectedLine}
 		{@const line = lines.find((l) => l.id === selectedLine)}
-		<div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-			<h3 class="mb-4 font-semibold text-slate-900 text-base">Selected Line:</h3>
+		<div class="rounded-lg border border-slate-600 bg-slate-800 p-6 shadow-sm">
+			<h3 class="mb-4 text-xs font-semibold text-white">Selected Line:</h3>
 			{#if line}
-				<div class="flex items-center gap-3 mb-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
-					<div class="w-5 h-5 rounded-full border-2 border-slate-400 shadow-sm" style="background-color: {line.color}"></div>
-					<span class="text-slate-700 text-sm">Line with {line.stations.length} stations</span>
+				<div
+					class="mb-3 flex items-center gap-3 rounded-md border border-slate-600 bg-slate-700 p-3"
+				>
+					<div
+						class="h-5 w-5 rounded-full border-2 border-slate-400 shadow-sm"
+						style="background-color: {line.color}"
+					></div>
+					<span class="text-sm text-slate-300">Line with {line.stations.length} stations</span>
 				</div>
 			{/if}
 		</div>
 	{/if}
 </div>
-

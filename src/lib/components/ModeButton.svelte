@@ -8,8 +8,10 @@
 	let { active, onclick, children }: Props = $props();
 </script>
 
-<button 
-	class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-150 h-9 px-3 border {active ? 'bg-slate-800 text-white border-slate-800 hover:bg-slate-700' : 'border-slate-200 bg-white text-slate-900 hover:bg-slate-50'}"
+<button
+	class="inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-150 {active
+		? 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600'
+		: 'border-slate-600 bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'}"
 	{onclick}
 >
 	{@render children()}

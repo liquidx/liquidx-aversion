@@ -36,11 +36,14 @@
 	let showDropdown = $state(false);
 
 	// Find the current color option or default to the first one
-	let currentColor = $derived(() => {
-		return colorOptions.find(color => color.hex.toLowerCase() === value.toLowerCase()) || colorOptions[0];
+	let currentColor = $derived.by(() => {
+		return (
+			colorOptions.find((color) => color.hex.toLowerCase() === value.toLowerCase()) ||
+			colorOptions[0]
+		);
 	});
 
-	function selectColor(color: typeof colorOptions[0]) {
+	function selectColor(color: (typeof colorOptions)[0]) {
 		onchange(color.hex);
 		showDropdown = false;
 	}
@@ -60,28 +63,36 @@
 
 <svelte:window onclick={handleClickOutside} />
 
-<div class="color-selector relative">
+<div class="color-selector relative flex items-center gap-2">
 	{#if label}
-		<label class="block text-sm font-medium text-slate-900 mb-2">{label}</label>
+		<label class="text-xs font-medium text-white">{label}</label>
 	{/if}
-	
+
 	<button
 		type="button"
 		onclick={toggleDropdown}
-		class="flex items-center justify-center w-12 h-9 border border-slate-200 rounded-md bg-white hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+		aria-label="Select color"
+		class="flex h-10 w-12 items-center justify-center rounded-md border border-slate-600 bg-slate-700 transition-colors hover:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 	>
-		<div class="w-6 h-6 rounded-full border-2 border-slate-300" style="background-color: {currentColor.hex}"></div>
+		<div
+			class="h-6 w-6 rounded-full border-2 border-slate-400"
+			style="background-color: {currentColor.hex}"
+		></div>
 	</button>
 
 	{#if showDropdown}
-		<div class="absolute z-10 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg">
+		<div class="absolute z-10 mt-1 w-48 rounded-md border border-slate-600 bg-slate-800 shadow-lg">
 			<div class="grid grid-cols-6 gap-2 p-3">
 				{#each colorOptions as color}
 					<button
 						type="button"
 						onclick={() => selectColor(color)}
 						title={color.name}
-						class="w-7 h-7 rounded-full transition-all hover:scale-110 m-0.5 {currentColor.hex === color.hex ? 'ring-2 ring-slate-800' : ''} {color.class}"
+						aria-label="Select {color.name}"
+						class="m-0.5 h-7 w-7 rounded-full transition-all hover:scale-110 {currentColor.hex ===
+						color.hex
+							? 'ring-2 ring-white'
+							: ''} {color.class}"
 					>
 					</button>
 				{/each}
