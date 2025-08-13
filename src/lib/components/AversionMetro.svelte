@@ -1084,7 +1084,10 @@
 						: 'border-slate-600 bg-slate-700 text-slate-500'}"
 					title="Delete Selected"
 				>
-					<Trash2 size={18} class="{selectedStations.length > 0 ? 'text-red-500' : 'text-slate-500'}" />
+					<Trash2
+						size={18}
+						class={selectedStations.length > 0 ? 'text-red-500' : 'text-slate-500'}
+					/>
 				</button>
 			</div>
 
@@ -1281,11 +1284,11 @@
 					<button
 						onclick={connectSelectedStations}
 						data-connect-button
-						class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-green-500 bg-green-500 text-white transition-colors duration-150 hover:bg-green-600"
+						class="inline-flex h-8 flex-row items-center justify-center gap-2 rounded-md border px-2 text-green-700 transition-colors duration-150 hover:bg-slate-700"
 						title="Connect Stations ({selectedStations.length})"
 					>
-						<Link2 size={18} /> Link Stations
-					</button>
+						<Link2 size={18} /> <span class="text-xs">Link Stations</span></button
+					>
 
 					<!-- Color Picker Popover -->
 					{#if showColorPicker}
@@ -1395,10 +1398,10 @@
 					<button
 						onclick={showAddToLineSelector}
 						data-add-to-line-button
-						class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-blue-500 bg-blue-500 px-3 text-white transition-colors duration-150 hover:bg-blue-600"
+						class="inline-flex h-8 flex-row items-center justify-center gap-2 rounded-md px-2 text-green-500 transition-colors duration-150 hover:bg-slate-700"
 						title="Add to existing line"
 					>
-						<Plus size={18} /> Add to Line
+						<Plus size={18} /> <span>Add to Line</span>
 					</button>
 
 					<!-- Line Selector Popover -->
@@ -1449,7 +1452,7 @@
 		</div>
 	</div>
 
-	<div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+	<div class="overflow-hidden rounded-lg bg-neutral-300 shadow-sm">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<svg
@@ -1478,7 +1481,7 @@
 					y1={viewBox.y}
 					x2={x}
 					y2={viewBox.y + viewBox.height}
-					stroke="#f0f0f0"
+					stroke="#90909030"
 					stroke-width="1"
 				/>
 			{/each}
@@ -1490,7 +1493,7 @@
 					y1={y}
 					x2={viewBox.x + viewBox.width}
 					y2={y}
-					stroke="#f0f0f0"
+					stroke="#90909030"
 					stroke-width="1"
 				/>
 			{/each}
@@ -1577,7 +1580,7 @@
 		{@const line = selectedLine ? lines.find((l) => l.id === selectedLine) : null}
 		{@const displayStations = line ? line.stations : selectedStations}
 		{@const displayLineId = line ? line.id : null}
-		{@const displayLineName = line ? line.name : `Selected Stations (${selectedStations.length})`}
+		{@const displayLineName = line ? line.name : `Stations (${selectedStations.length})`}
 		{@const displayLineColor = line ? line.color : '#64748b'}
 
 		<div class="rounded-lg border border-slate-600 bg-slate-800 p-4 shadow-sm sm:p-6">
