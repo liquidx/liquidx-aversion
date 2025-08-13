@@ -1080,11 +1080,11 @@
 					disabled={selectedStations.length === 0}
 					class="inline-flex h-10 w-10 items-center justify-center rounded-md border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 {selectedStations.length >
 					0
-						? 'border-red-500 bg-red-500 text-white hover:bg-red-600'
+						? 'border-slate-600 bg-slate-700 hover:bg-slate-600'
 						: 'border-slate-600 bg-slate-700 text-slate-500'}"
 					title="Delete Selected"
 				>
-					<Trash2 size={18} />
+					<Trash2 size={18} class="{selectedStations.length > 0 ? 'text-red-500' : 'text-slate-500'}" />
 				</button>
 			</div>
 
@@ -1355,10 +1355,10 @@
 						/>
 						<button
 							onclick={deleteSelectedLine}
-							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-500 bg-red-500 text-white transition-colors duration-150 hover:bg-red-600"
+							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-700 transition-colors duration-150 hover:bg-slate-600"
 							title="Delete Line"
 						>
-							<Trash2 size={18} />
+							<Trash2 size={18} class="text-red-500" />
 						</button>
 					</div>
 				{/if}
@@ -1380,10 +1380,10 @@
 						/>
 						<button
 							onclick={deleteSelectedLine}
-							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-500 bg-red-500 text-white transition-colors duration-150 hover:bg-red-600"
+							class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-600 bg-slate-700 transition-colors duration-150 hover:bg-slate-600"
 							title="Delete Line"
 						>
-							<Trash2 size={18} />
+							<Trash2 size={18} class="text-red-500" />
 						</button>
 					</div>
 				{/if}
