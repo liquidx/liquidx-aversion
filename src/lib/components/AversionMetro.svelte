@@ -104,6 +104,10 @@
 	}
 
 	function screenToWorld(screenX: number, screenY: number): [number, number] {
+		if (!svgElement) {
+			console.warn('SVG element not bound yet');
+			return [0, 0];
+		}
 		const rect = svgElement.getBoundingClientRect();
 		const x = ((screenX - rect.left) / rect.width) * viewBox.width + viewBox.x;
 		const y = ((screenY - rect.top) / rect.height) * viewBox.height + viewBox.y;
@@ -377,9 +381,13 @@
 
 	function findStationAt(x: number, y: number, isTouch: boolean = false): Station | undefined {
 		// Use larger touch radius for better touch accessibility
-		const touchRadius = STATION_RADIUS * 4; // 32px radius for touch
-		const mouseRadius = STATION_RADIUS * 2; // 16px radius for mouse
-		const selectionRadius = isTouch ? touchRadius : mouseRadius;
+		const touchRadiusPixels = STATION_RADIUS * 4; // 32px radius for touch
+		const mouseRadiusPixels = STATION_RADIUS * 2; // 16px radius for mouse
+		const radiusPixels = isTouch ? touchRadiusPixels : mouseRadiusPixels;
+		
+		// Scale the radius based on current zoom level (viewBox scale)
+		const scale = viewBox.width / SVG_WIDTH; // Current zoom scale
+		const selectionRadius = radiusPixels * scale;
 
 		return stations.find((station) => {
 			const dx = station.x - x;
