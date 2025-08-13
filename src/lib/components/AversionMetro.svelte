@@ -1,9 +1,8 @@
 <script lang="ts">
-	import ModeButton from './ModeButton.svelte';
 	import ColorSelector from './ColorSelector.svelte';
+	import LabelPositionControl from './LabelPositionControl.svelte';
+	import ModeSelector from './ModeSelector.svelte';
 	import {
-		MapPin,
-		Route,
 		Link2,
 		Trash2,
 		Undo2,
@@ -11,11 +10,7 @@
 		FolderOpen,
 		X,
 		Plus,
-		GripVertical,
-		ArrowUp,
-		ArrowDown,
-		ArrowLeft,
-		ArrowRight
+		GripVertical
 	} from '@lucide/svelte';
 
 	interface Station {
@@ -1065,14 +1060,10 @@
 	<div class="flex flex-col gap-3">
 		<!-- Main toolbar row -->
 		<div class="flex flex-wrap items-center gap-2 sm:gap-4">
-			<div class="flex items-center gap-2">
-				<ModeButton active={selectedTool === 'station'} onclick={() => (selectedTool = 'station')}>
-					<MapPin size={18} />
-				</ModeButton>
-				<ModeButton active={selectedTool === 'line'} onclick={() => (selectedTool = 'line')}>
-					<Route size={18} />
-				</ModeButton>
-			</div>
+			<ModeSelector
+				selectedMode={selectedTool}
+				onchange={(mode) => (selectedTool = mode)}
+			/>
 
 			<div class="flex items-center gap-2">
 				<button
@@ -1175,50 +1166,10 @@
 						/>
 
 						<!-- Label Position Controls -->
-						<div
-							class="flex items-center gap-1 rounded-md border border-slate-600 bg-slate-700 p-1"
-						>
-							<button
-								onclick={() => changeLabelAngle(station.id, 90)}
-								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
-								90
-									? 'bg-blue-600 text-white'
-									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
-								title="Position label above (90°)"
-							>
-								<ArrowUp size={14} />
-							</button>
-							<button
-								onclick={() => changeLabelAngle(station.id, 270)}
-								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
-								270
-									? 'bg-blue-600 text-white'
-									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
-								title="Position label below (270°)"
-							>
-								<ArrowDown size={14} />
-							</button>
-							<button
-								onclick={() => changeLabelAngle(station.id, 180)}
-								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
-								180
-									? 'bg-blue-600 text-white'
-									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
-								title="Position label left (180°)"
-							>
-								<ArrowLeft size={14} />
-							</button>
-							<button
-								onclick={() => changeLabelAngle(station.id, 0)}
-								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
-								0
-									? 'bg-blue-600 text-white'
-									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
-								title="Position label right (0°)"
-							>
-								<ArrowRight size={14} />
-							</button>
-						</div>
+						<LabelPositionControl
+							selectedAngle={station.labelAngle}
+							onchange={(angle) => changeLabelAngle(station.id, angle)}
+						/>
 
 						{#if selectedTool === 'station' && lines.length > 0}
 							<div class="relative">
