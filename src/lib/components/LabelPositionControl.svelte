@@ -1,6 +1,15 @@
 <script lang="ts">
 	import ToggleIconButton from './ToggleIconButton.svelte';
-	import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from '@lucide/svelte';
+	import { 
+		ArrowUp, 
+		ArrowDown, 
+		ArrowLeft, 
+		ArrowRight,
+		ArrowUpRight,
+		ArrowUpLeft,
+		ArrowDownLeft,
+		ArrowDownRight
+	} from '@lucide/svelte';
 
 	interface Props {
 		selectedAngle: number;
@@ -10,10 +19,16 @@
 	let { selectedAngle, onchange }: Props = $props();
 
 	const positions = [
+		// Main directions
 		{ icon: ArrowUp, angle: 90, title: 'Position label above (90°)' },
+		{ icon: ArrowRight, angle: 0, title: 'Position label right (0°)' },
 		{ icon: ArrowDown, angle: 270, title: 'Position label below (270°)' },
 		{ icon: ArrowLeft, angle: 180, title: 'Position label left (180°)' },
-		{ icon: ArrowRight, angle: 0, title: 'Position label right (0°)' }
+		// Diagonal directions
+		{ icon: ArrowUpRight, angle: 45, title: 'Position label top-right (45°)' },
+		{ icon: ArrowUpLeft, angle: 135, title: 'Position label top-left (135°)' },
+		{ icon: ArrowDownLeft, angle: 225, title: 'Position label bottom-left (225°)' },
+		{ icon: ArrowDownRight, angle: 315, title: 'Position label bottom-right (315°)' }
 	];
 </script>
 

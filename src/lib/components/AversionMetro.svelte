@@ -493,36 +493,60 @@
 
 	function getLabelPosition(station: Station): { x: number; y: number; anchor: string } {
 		const textHeight = 12; // Font size from SVG text element
-		const margin = 20; // Additional margin for better spacing (doubled)
+		const margin = 20; // Additional margin for better spacing
+		const diagonalMargin = 16; // Slightly smaller margin for diagonal positions
 
 		// Normalize angle to 0-359
 		const normalizedAngle = ((station.labelAngle % 360) + 360) % 360;
 
-		// Calculate base position using trigonometry
 		let x = station.x;
 		let y = station.y;
-
-		// Determine text anchor and adjust positioning for proper text placement
 		let anchor: string;
 
-		if (normalizedAngle >= 315 || normalizedAngle < 45) {
-			// Right side (0°)
-			anchor = 'start';
-			y += textHeight * 0.3; // Adjust for vertical centering
-			x += textHeight + margin; // Position text right of the circle with margin
-		} else if (normalizedAngle >= 45 && normalizedAngle < 135) {
-			// Top side (90° - above)
-			anchor = 'middle';
-			y -= margin; // Position text baseline above the circle with margin
-		} else if (normalizedAngle >= 135 && normalizedAngle < 225) {
-			// Left side (180°)
-			anchor = 'end';
-			y = station.y + textHeight * 0.3; // Adjust for vertical centering
-			x -= textHeight + margin; // Position text left of the circle with margin
-		} else {
-			// Bottom side (270° - below)
-			anchor = 'middle';
-			y += textHeight + margin; // Position text top below the circle with margin
+		// Handle specific angles
+		switch (normalizedAngle) {
+			case 0: // Right
+				anchor = 'start';
+				x += textHeight + margin;
+				y += textHeight * 0.3;
+				break;
+			case 45: // Top-right
+				anchor = 'start';
+				x += diagonalMargin;
+				y -= diagonalMargin;
+				break;
+			case 90: // Above
+				anchor = 'middle';
+				y -= margin;
+				break;
+			case 135: // Top-left
+				anchor = 'end';
+				x -= diagonalMargin;
+				y -= diagonalMargin;
+				break;
+			case 180: // Left
+				anchor = 'end';
+				x -= textHeight + margin;
+				y += textHeight * 0.3;
+				break;
+			case 225: // Bottom-left
+				anchor = 'end';
+				x -= diagonalMargin;
+				y += textHeight + diagonalMargin;
+				break;
+			case 270: // Below
+				anchor = 'middle';
+				y += textHeight + margin;
+				break;
+			case 315: // Bottom-right
+				anchor = 'start';
+				x += diagonalMargin;
+				y += textHeight + diagonalMargin;
+				break;
+			default:
+				// Fallback for any other angles (though we shouldn't have any)
+				anchor = 'middle';
+				y -= margin;
 		}
 
 		return { x, y, anchor };
