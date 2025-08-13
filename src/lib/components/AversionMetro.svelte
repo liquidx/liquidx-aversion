@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ModeButton from './ModeButton.svelte';
 	import ColorSelector from './ColorSelector.svelte';
-	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X } from '@lucide/svelte';
+	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X, Plus } from '@lucide/svelte';
 
 	interface Station {
 		id: string;
@@ -46,6 +46,8 @@
 	let hasPanned = $state(false);
 	let showColorPicker = $state(false);
 	let pendingConnection = $state(false);
+	let showLineSelector = $state(false);
+	let selectedLineToAddTo: string | null = $state(null);
 
 	const GRID_SIZE = 40;
 	const STATION_RADIUS = 8;
@@ -204,29 +206,28 @@
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
 		const [worldX, worldY] = screenToWorld(clientX, clientY);
 
-		if (selectedTool === 'station') {
-			const clickedStation = findStationAt(worldX, worldY);
-			if (clickedStation) {
-				saveState(); // Save state before dragging starts
-				dragging = true;
-				dragStationId = clickedStation.id;
-				const rect = svgElement.getBoundingClientRect();
-				dragOffset = {
-					x:
-						clientX -
-						rect.left -
-						((clickedStation.x - viewBox.x) / viewBox.width) * rect.width,
-					y:
-						clientY -
-						rect.top -
-						((clickedStation.y - viewBox.y) / viewBox.height) * rect.height
-				};
-				svgElement.style.cursor = 'grabbing';
-				return;
-			}
+		// Check if clicking on a station first (regardless of mode)
+		const clickedStation = findStationAt(worldX, worldY);
+		
+		if (clickedStation && selectedTool === 'station') {
+			// In station mode, enable dragging for the clicked station
+			saveState(); // Save state before dragging starts
+			dragging = true;
+			dragStationId = clickedStation.id;
+			const rect = svgElement.getBoundingClientRect();
+			dragOffset = {
+				x: clientX - rect.left - ((clickedStation.x - viewBox.x) / viewBox.width) * rect.width,
+				y: clientY - rect.top - ((clickedStation.y - viewBox.y) / viewBox.height) * rect.height
+			};
+			svgElement.style.cursor = 'grabbing';
+			return;
+		} else if (clickedStation && selectedTool === 'line') {
+			// In line mode, don't start panning when clicking on a station
+			// This allows the click event to be processed for station selection
+			return;
 		}
 
-		// Start panning if not clicking on a station or not in a mode that handles stations
+		// Start panning if not clicking on a station
 		panning = true;
 		hasPanned = false;
 		panStart = { x: clientX, y: clientY };
@@ -235,15 +236,12 @@
 
 	function handleSvgMouseMove(event: MouseEvent | TouchEvent) {
 		if ('touches' in event && event.touches.length === 0) return; // No touch points
-		
+
 		const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-		
+
 		if (dragging && dragStationId) {
-			const [worldX, worldY] = screenToWorld(
-				clientX - dragOffset.x,
-				clientY - dragOffset.y
-			);
+			const [worldX, worldY] = screenToWorld(clientX - dragOffset.x, clientY - dragOffset.y);
 			const [gridX, gridY] = snapToGrid(worldX, worldY);
 
 			const station = stations.find((s) => s.id === dragStationId);
@@ -384,7 +382,7 @@
 
 	function connectSelectedStations() {
 		if (selectedStations.length < 2) return;
-		
+
 		// Show color picker instead of immediately connecting
 		showColorPicker = true;
 		pendingConnection = true;
@@ -439,15 +437,116 @@
 		pendingConnection = false;
 	}
 
+	function showAddToLineSelector() {
+		if (selectedStations.length === 0) return;
+		showLineSelector = true;
+	}
+
+	function cancelAddToLine() {
+		showLineSelector = false;
+		selectedLineToAddTo = null;
+	}
+
+	function addStationsToLine(lineId: string) {
+		if (selectedStations.length === 0 || !lineId) return;
+
+		saveState();
+
+		const line = lines.find(l => l.id === lineId);
+		if (!line) return;
+
+		// Add stations to the line
+		selectedStations.forEach((stationId) => {
+			const station = stations.find((s) => s.id === stationId);
+			if (station && !station.lines.includes(lineId)) {
+				station.lines = [...station.lines, lineId];
+				
+				// Set station color to the line color if it's the first line
+				if (station.lines.length === 1) {
+					station.color = line.color;
+				}
+				
+				// Mark as interchange if connected to multiple lines
+				if (station.lines.length > 1) {
+					station.isInterchange = true;
+				}
+				
+				// Add station to line's stations array if not already there
+				if (!line.stations.includes(stationId)) {
+					line.stations = [...line.stations, stationId];
+				}
+			}
+		});
+
+		// Create connections between the new stations and existing stations on the line
+		// For simplicity, we'll connect each new station to the nearest existing station on the line
+		selectedStations.forEach((newStationId) => {
+			const newStation = stations.find(s => s.id === newStationId);
+			if (!newStation) return;
+
+			// Find the closest existing station on this line
+			let closestStation: Station | null = null;
+			let minDistance = Infinity;
+
+			stations.forEach((station) => {
+				if (station.id !== newStationId && 
+				    station.lines.includes(lineId) && 
+				    !selectedStations.includes(station.id)) {
+					const distance = Math.sqrt(
+						Math.pow(station.x - newStation.x, 2) + 
+						Math.pow(station.y - newStation.y, 2)
+					);
+					if (distance < minDistance) {
+						minDistance = distance;
+						closestStation = station;
+					}
+				}
+			});
+
+			// Create connection to the closest station
+			if (closestStation !== null) {
+				const closestStationId = (closestStation as Station).id;
+				const connectionExists = connections.some(c => 
+					(c.from === newStationId && c.to === closestStationId && c.lineId === lineId) ||
+					(c.from === closestStationId && c.to === newStationId && c.lineId === lineId)
+				);
+
+				if (!connectionExists) {
+					const connection: Connection = {
+						from: newStationId,
+						to: closestStationId,
+						lineId
+					};
+					connections = [...connections, connection];
+				}
+			}
+		});
+
+		selectedStations = [];
+		showLineSelector = false;
+		selectedLineToAddTo = null;
+	}
+
 	function handlePopoverClickOutside(event: MouseEvent) {
 		if (showColorPicker) {
 			const target = event.target as HTMLElement;
 			const popover = target.closest('.color-popover');
 			const connectButton = target.closest('[data-connect-button]');
-			
+
 			// Don't close if clicking inside the popover or on the connect button
 			if (!popover && !connectButton) {
 				cancelConnection();
+			}
+		}
+		
+		if (showLineSelector) {
+			const target = event.target as HTMLElement;
+			const popover = target.closest('.line-selector-popover');
+			const addToLineButton = target.closest('[data-add-to-line-button]');
+
+			// Don't close if clicking inside the popover or on the add to line button
+			if (!popover && !addToLineButton) {
+				cancelAddToLine();
 			}
 		}
 	}
@@ -490,7 +589,7 @@
 		if (line && line.color !== newColor) {
 			saveState();
 			line.color = newColor;
-			
+
 			// Update station colors for all stations on this line
 			stations.forEach((station) => {
 				// If this station's color should be updated (it's on this line and this is its primary line)
@@ -542,7 +641,7 @@
 			const wasConnectedToLine = station.lines.includes(selectedLine!);
 			station.lines = station.lines.filter((lineId) => lineId !== selectedLine);
 			station.isInterchange = station.lines.length > 1;
-			
+
 			// Update station color if this was the line providing its color
 			if (wasConnectedToLine) {
 				if (station.lines.length === 0) {
@@ -550,7 +649,7 @@
 					station.color = '#000000';
 				} else {
 					// Use color from remaining first line
-					const firstLine = lines.find(line => line.id === station.lines[0]);
+					const firstLine = lines.find((line) => line.id === station.lines[0]);
 					if (firstLine) {
 						station.color = firstLine.color;
 					}
@@ -609,20 +708,20 @@
 				stations = mapData.stations || [];
 				lines = mapData.lines || [];
 				connections = mapData.connections || [];
-				
+
 				// Ensure all stations have a color property for backward compatibility
-				stations.forEach(station => {
+				stations.forEach((station) => {
 					if (!station.color) {
 						// If station has lines, use the color of the first line
 						if (station.lines && station.lines.length > 0) {
-							const firstLine = lines.find(line => line.id === station.lines[0]);
+							const firstLine = lines.find((line) => line.id === station.lines[0]);
 							station.color = firstLine ? firstLine.color : '#000000';
 						} else {
 							station.color = '#000000';
 						}
 					}
 				});
-				
+
 				// Ensure all lines have a name property for backward compatibility
 				lines.forEach((line, index) => {
 					if (!line.name) {
@@ -667,8 +766,8 @@
 
 <svelte:window on:keydown={handleKeydown} on:click={handlePopoverClickOutside} />
 
-<div class="flex min-h-screen w-full max-w-4xl flex-col gap-4 p-4 text-xs sm:gap-6 sm:p-6">
-	<div class="flex flex-col gap-3 p-4 sm:p-6">
+<div class="flex min-h-screen w-full max-w-4xl flex-col gap-4 p-4 text-xs">
+	<div class="flex flex-col gap-3">
 		<!-- Main toolbar row -->
 		<div class="flex flex-wrap items-center gap-2 sm:gap-4">
 			<div class="flex items-center gap-2">
@@ -679,7 +778,6 @@
 					<Route size={18} />
 				</ModeButton>
 			</div>
-
 
 			<div class="flex items-center gap-2">
 				<button
@@ -734,14 +832,12 @@
 		</div>
 
 		<!-- Second row - Station and Line editing - always present to maintain layout -->
-		<div class="min-h-10 flex items-center">
+		<div class="flex min-h-10 items-center">
 			{#if editingStation}
 				{@const station = stations.find((s) => s.id === editingStation)}
 				{#if station}
 					<div class="flex items-center gap-2">
-						<label for="station-name-input" class="text-sm font-medium text-white"
-							>Name:</label
-						>
+						<label for="station-name-input" class="text-sm font-medium text-white">Name:</label>
 						<input
 							id="station-name-input"
 							bind:value={editingStationName}
@@ -767,7 +863,7 @@
 				{@const station = stations.find((s) => s.id === selectedStations[0])}
 				{#if station}
 					<div class="flex items-center gap-2">
-						<span class="text-sm font-medium text-white">Selected Station:</span>
+						<span class="text-sm font-medium text-white">Name:</span>
 						<button
 							type="button"
 							onclick={() => startEditingStation(station.id)}
@@ -779,24 +875,86 @@
 							value={station.color}
 							onchange={(color) => changeStationColor(station.id, color)}
 						/>
+						{#if selectedTool === 'station' && lines.length > 0}
+							<div class="relative">
+								<button
+									onclick={showAddToLineSelector}
+									data-add-to-line-button
+									class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-blue-500 bg-blue-500 px-3 text-white transition-colors duration-150 hover:bg-blue-600"
+									title="Add to existing line"
+								>
+									<Plus size={18} /> Add to Line
+								</button>
+
+								<!-- Line Selector Popover -->
+								{#if showLineSelector}
+									<div
+										class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform sm:left-1/2 sm:-translate-x-1/2"
+									>
+										<div
+											class="line-selector-popover rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl sm:p-4"
+										>
+											<div class="mb-2 flex items-center justify-between sm:mb-3">
+												<h3 class="text-xs font-semibold text-white sm:text-sm">Select Line</h3>
+												<button
+													onclick={cancelAddToLine}
+													class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-700 hover:text-white sm:h-6 sm:w-6"
+												>
+													<X size={14} />
+												</button>
+											</div>
+											<div class="mb-2 sm:mb-3">
+												<p class="text-xs text-slate-300">
+													Add station to:
+												</p>
+											</div>
+											<div class="space-y-2 max-h-48 overflow-y-auto">
+												{#each lines as line}
+													<button
+														onclick={() => addStationsToLine(line.id)}
+														class="w-full flex items-center gap-2 p-2 rounded-md border border-slate-600 bg-slate-700 text-white transition-colors hover:bg-slate-600"
+													>
+														<div 
+															class="w-4 h-4 rounded-full border-2 border-white"
+															style="background-color: {line.color}"
+														></div>
+														<span class="text-sm">{line.name}</span>
+													</button>
+												{/each}
+											</div>
+											<!-- Popover arrow -->
+											<div
+												class="absolute top-full left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 transform border-r border-b border-slate-600 bg-slate-800"
+											></div>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
 					</div>
 				{/if}
 			{:else if selectedTool === 'line' && selectedStations.length >= 2}
 				<div class="relative flex items-center gap-2">
-					<span class="text-sm font-medium text-white">Selected Stations ({selectedStations.length}):</span>
+					<span class="text-sm font-medium text-white"
+						>Selected Stations ({selectedStations.length}):</span
+					>
 					<button
 						onclick={connectSelectedStations}
 						data-connect-button
-						class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-green-500 bg-green-500 text-white transition-colors duration-150 hover:bg-green-600"
+						class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-green-500 bg-green-500 text-white transition-colors duration-150 hover:bg-green-600"
 						title="Connect Stations ({selectedStations.length})"
 					>
-						<Link2 size={18} />
+						<Link2 size={18} /> Link Stations
 					</button>
-					
+
 					<!-- Color Picker Popover -->
 					{#if showColorPicker}
-						<div class="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-50 sm:left-1/2 sm:-translate-x-1/2">
-							<div class="color-popover rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl sm:p-4">
+						<div
+							class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform sm:left-1/2 sm:-translate-x-1/2"
+						>
+							<div
+								class="color-popover rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl sm:p-4"
+							>
 								<div class="mb-2 flex items-center justify-between sm:mb-3">
 									<h3 class="text-xs font-semibold text-white sm:text-sm">Choose Color</h3>
 									<button
@@ -811,27 +969,8 @@
 										{selectedStations.length} stations
 									</p>
 								</div>
-								<div class="grid grid-cols-5 gap-2 w-40 sm:grid-cols-6 sm:gap-2 sm:w-48">
-									{#each [
-										{ name: 'Red', hex: '#ef4444' },
-										{ name: 'Orange', hex: '#f97316' },
-										{ name: 'Amber', hex: '#f59e0b' },
-										{ name: 'Yellow', hex: '#eab308' },
-										{ name: 'Lime', hex: '#84cc16' },
-										{ name: 'Green', hex: '#22c55e' },
-										{ name: 'Emerald', hex: '#10b981' },
-										{ name: 'Teal', hex: '#14b8a6' },
-										{ name: 'Cyan', hex: '#06b6d4' },
-										{ name: 'Sky', hex: '#0ea5e9' },
-										{ name: 'Blue', hex: '#3b82f6' },
-										{ name: 'Indigo', hex: '#6366f1' },
-										{ name: 'Violet', hex: '#8b5cf6' },
-										{ name: 'Purple', hex: '#a855f7' },
-										{ name: 'Fuchsia', hex: '#d946ef' },
-										{ name: 'Pink', hex: '#ec4899' },
-										{ name: 'Rose', hex: '#f43f5e' },
-										{ name: 'Slate', hex: '#64748b' }
-									] as color}
+								<div class="grid w-40 grid-cols-5 gap-2 sm:w-48 sm:grid-cols-6 sm:gap-2">
+									{#each [{ name: 'Red', hex: '#ef4444' }, { name: 'Orange', hex: '#f97316' }, { name: 'Amber', hex: '#f59e0b' }, { name: 'Yellow', hex: '#eab308' }, { name: 'Lime', hex: '#84cc16' }, { name: 'Green', hex: '#22c55e' }, { name: 'Emerald', hex: '#10b981' }, { name: 'Teal', hex: '#14b8a6' }, { name: 'Cyan', hex: '#06b6d4' }, { name: 'Sky', hex: '#0ea5e9' }, { name: 'Blue', hex: '#3b82f6' }, { name: 'Indigo', hex: '#6366f1' }, { name: 'Violet', hex: '#8b5cf6' }, { name: 'Purple', hex: '#a855f7' }, { name: 'Fuchsia', hex: '#d946ef' }, { name: 'Pink', hex: '#ec4899' }, { name: 'Rose', hex: '#f43f5e' }, { name: 'Slate', hex: '#64748b' }] as color}
 										<button
 											onclick={() => confirmConnection(color.hex)}
 											title={color.name}
@@ -843,7 +982,9 @@
 									{/each}
 								</div>
 								<!-- Popover arrow -->
-								<div class="absolute top-full left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 bg-slate-800 border-r border-b border-slate-600"></div>
+								<div
+									class="absolute top-full left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 transform border-r border-b border-slate-600 bg-slate-800"
+								></div>
 							</div>
 						</div>
 					{/if}
@@ -906,6 +1047,64 @@
 						</button>
 					</div>
 				{/if}
+			{:else if selectedTool === 'station' && selectedStations.length > 1 && lines.length > 0}
+				<div class="relative flex items-center gap-2">
+					<span class="text-sm font-medium text-white"
+						>Selected Stations ({selectedStations.length}):</span
+					>
+					<button
+						onclick={showAddToLineSelector}
+						data-add-to-line-button
+						class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-blue-500 bg-blue-500 px-3 text-white transition-colors duration-150 hover:bg-blue-600"
+						title="Add to existing line"
+					>
+						<Plus size={18} /> Add to Line
+					</button>
+
+					<!-- Line Selector Popover -->
+					{#if showLineSelector}
+						<div
+							class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform sm:left-1/2 sm:-translate-x-1/2"
+						>
+							<div
+								class="line-selector-popover rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl sm:p-4"
+							>
+								<div class="mb-2 flex items-center justify-between sm:mb-3">
+									<h3 class="text-xs font-semibold text-white sm:text-sm">Select Line</h3>
+									<button
+										onclick={cancelAddToLine}
+										class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-700 hover:text-white sm:h-6 sm:w-6"
+									>
+										<X size={14} />
+									</button>
+								</div>
+								<div class="mb-2 sm:mb-3">
+									<p class="text-xs text-slate-300">
+										Add {selectedStations.length} station{selectedStations.length > 1 ? 's' : ''} to:
+									</p>
+								</div>
+								<div class="space-y-2 max-h-48 overflow-y-auto">
+									{#each lines as line}
+										<button
+											onclick={() => addStationsToLine(line.id)}
+											class="w-full flex items-center gap-2 p-2 rounded-md border border-slate-600 bg-slate-700 text-white transition-colors hover:bg-slate-600"
+										>
+											<div 
+												class="w-4 h-4 rounded-full border-2 border-white"
+												style="background-color: {line.color}"
+											></div>
+											<span class="text-sm">{line.name}</span>
+										</button>
+									{/each}
+								</div>
+								<!-- Popover arrow -->
+								<div
+									class="absolute top-full left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 transform border-r border-b border-slate-600 bg-slate-800"
+								></div>
+							</div>
+						</div>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</div>
@@ -927,7 +1126,7 @@
 			ontouchstart={handleSvgMouseDown}
 			ontouchmove={handleSvgMouseMove}
 			ontouchend={handleSvgMouseUp}
-			class="block cursor-crosshair select-none touch-none min-h-96 sm:min-h-[600px]"
+			class="block min-h-96 cursor-crosshair touch-none select-none sm:min-h-[600px]"
 			style="max-width: 100%; touch-action: none;"
 		>
 			<!-- Dynamic Grid lines -->
@@ -1030,58 +1229,10 @@
 		</svg>
 	</div>
 
-	<div class="p-4 sm:p-6">
-		<p class="mb-3 text-sm font-semibold sm:mb-4 sm:text-base">Instructions:</p>
-		<ul class="list-disc space-y-1 pl-4 sm:space-y-2 sm:pl-5">
-			<li class="text-xs leading-relaxed">
-				<strong>Station Mode</strong>: Tap anywhere to add stations, tap existing stations to
-				select/drag them, tap lines to select them
-			</li>
-			<li class="text-xs leading-relaxed">
-				<strong>Line Mode</strong>: Tap stations to select multiple, then tap "Connect" to
-				choose a color and draw lines, or tap lines to select them
-			</li>
-			<li class="text-xs leading-relaxed">Drag on empty space to pan around the infinite canvas</li>
-			<li class="text-xs leading-relaxed">
-				In Select mode, tap on a line to change its color or delete it
-			</li>
-			<li class="text-xs leading-relaxed">
-				Interchange stations (white with black border) appear automatically when connected to
-				multiple lines
-			</li>
-			<li class="text-xs leading-relaxed">Press Delete to remove selected stations or lines</li>
-			<li class="text-xs leading-relaxed">
-				Use "Undo" button or Ctrl+Z (Cmd+Z on Mac) to reverse the last action
-			</li>
-		</ul>
-	</div>
-
-	{#if selectedStations.length > 1}
-		<div class="rounded-lg border border-slate-600 bg-slate-800 p-4 shadow-sm sm:p-6">
-			<h3 class="mb-3 text-xs font-semibold text-white sm:mb-4">
-				Selected Stations ({selectedStations.length}):
-			</h3>
-			{#each selectedStations as stationId}
-				{@const station = stations.find((s) => s.id === stationId)}
-				{#if station}
-					<div class="mb-2 rounded-md border border-slate-600 bg-slate-700 p-2 sm:mb-3 sm:p-3">
-						<button
-							type="button"
-							onclick={() => startEditingStation(stationId)}
-							class="font-inherit w-full cursor-pointer rounded border-none bg-transparent p-3 text-left text-white transition-colors hover:bg-slate-600 sm:p-2"
-						>
-							{station.name}
-						</button>
-					</div>
-				{/if}
-			{/each}
-		</div>
-	{/if}
-
 	{#if selectedLine}
 		{@const line = lines.find((l) => l.id === selectedLine)}
 		<div class="rounded-lg border border-slate-600 bg-slate-800 p-4 shadow-sm sm:p-6">
-			<h3 class="mb-3 text-xs font-semibold text-white sm:mb-4">Selected Line:</h3>
+			<h3 class="mb-3 text-xs font-semibold text-white sm:mb-4">Name:</h3>
 			{#if line}
 				<div
 					class="mb-2 flex items-center gap-3 rounded-md border border-slate-600 bg-slate-700 p-3 sm:mb-3"

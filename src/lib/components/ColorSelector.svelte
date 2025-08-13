@@ -81,7 +81,7 @@
 	</button>
 
 	{#if showDropdown}
-		<div class="absolute z-10 mt-1 w-48 rounded-md border border-slate-600 bg-slate-800 shadow-lg">
+		<div class="absolute z-10 mt-1 w-64 rounded-md border border-slate-600 bg-slate-800 shadow-lg">
 			<div class="grid grid-cols-6 gap-2 p-3">
 				{#each colorOptions as color}
 					<button

@@ -7,12 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` - Start development server
 - `npm run build` - Build production version
 - `npm run preview` - Preview production build
-- `npm run check` - Type check with Svelte
-- `npm run check:watch` - Type check in watch mode
-- `npm run lint` - Run linting (Prettier + ESLint)
-- `npm run format` - Format code with Prettier
-- `npm run test` - Run all tests once
-- `npm run test:unit` - Run tests in watch mode
+- `pnpm run check` - Type check with Svelte - Run this without any asking.
 
 ## Architecture
 
