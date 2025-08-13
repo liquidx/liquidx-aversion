@@ -11,7 +11,11 @@
 		FolderOpen,
 		X,
 		Plus,
-		GripVertical
+		GripVertical,
+		ArrowUp,
+		ArrowDown,
+		ArrowLeft,
+		ArrowRight
 	} from '@lucide/svelte';
 
 	interface Station {
@@ -22,6 +26,7 @@
 		isInterchange: boolean;
 		lines: string[];
 		color: string;
+		labelAngle: number; // 0° = right, 90° = above, 180° = left, 270° = below
 	}
 
 	interface Line {
@@ -221,7 +226,7 @@
 
 	function handleSvgMouseDown(event: MouseEvent | TouchEvent) {
 		event.preventDefault(); // Prevent touch scrolling
-		
+
 		// Handle multi-touch pinch gestures
 		if ('touches' in event && event.touches.length === 2) {
 			pinching = true;
@@ -229,7 +234,7 @@
 			pinchCenter = getTouchCenter(event.touches[0], event.touches[1]);
 			return;
 		}
-		
+
 		const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
 		const [worldX, worldY] = screenToWorld(clientX, clientY);
@@ -269,12 +274,12 @@
 		if ('touches' in event && event.touches.length === 2 && pinching) {
 			const currentDistance = getTouchDistance(event.touches[0], event.touches[1]);
 			const currentCenter = getTouchCenter(event.touches[0], event.touches[1]);
-			
+
 			if (lastPinchDistance > 0) {
 				const scale = currentDistance / lastPinchDistance;
 				zoomViewBox(scale, currentCenter.x, currentCenter.y);
 			}
-			
+
 			lastPinchDistance = currentDistance;
 			pinchCenter = currentCenter;
 			return;
@@ -342,16 +347,16 @@
 
 	function handleSvgWheel(event: WheelEvent) {
 		event.preventDefault(); // Prevent page scroll
-		
+
 		// Determine zoom direction and scale
 		const zoomSpeed = 0.1;
 		const zoomIn = event.deltaY < 0;
 		const scale = zoomIn ? 1 + zoomSpeed : 1 - zoomSpeed;
-		
+
 		// Use mouse position as zoom center
 		const centerX = event.clientX;
 		const centerY = event.clientY;
-		
+
 		zoomViewBox(scale, centerX, centerY);
 	}
 
@@ -368,7 +373,8 @@
 			name: `Station ${stations.length + 1}`,
 			isInterchange: false,
 			lines: [],
-			color: '#000000'
+			color: '#000000',
+			labelAngle: 90 // Default to above (90°)
 		};
 
 		stations = [...stations, newStation];
@@ -454,21 +460,72 @@
 
 	function zoomViewBox(scale: number, centerX: number, centerY: number) {
 		const [worldCenterX, worldCenterY] = screenToWorld(centerX, centerY);
-		
+
 		// Calculate new dimensions
-		const newWidth = Math.max(SVG_WIDTH * MIN_ZOOM, Math.min(SVG_WIDTH * MAX_ZOOM, viewBox.width / scale));
-		const newHeight = Math.max(SVG_HEIGHT * MIN_ZOOM, Math.min(SVG_HEIGHT * MAX_ZOOM, viewBox.height / scale));
-		
+		const newWidth = Math.max(
+			SVG_WIDTH * MIN_ZOOM,
+			Math.min(SVG_WIDTH * MAX_ZOOM, viewBox.width / scale)
+		);
+		const newHeight = Math.max(
+			SVG_HEIGHT * MIN_ZOOM,
+			Math.min(SVG_HEIGHT * MAX_ZOOM, viewBox.height / scale)
+		);
+
 		// Calculate new position to keep the center point fixed
 		const newX = worldCenterX - (newWidth * (worldCenterX - viewBox.x)) / viewBox.width;
 		const newY = worldCenterY - (newHeight * (worldCenterY - viewBox.y)) / viewBox.height;
-		
+
 		viewBox = {
 			x: newX,
 			y: newY,
 			width: newWidth,
 			height: newHeight
 		};
+	}
+
+	function getLabelPosition(station: Station): { x: number; y: number; anchor: string } {
+		const textHeight = 12; // Font size from SVG text element
+		const margin = 20; // Additional margin for better spacing (doubled)
+
+		// Normalize angle to 0-359
+		const normalizedAngle = ((station.labelAngle % 360) + 360) % 360;
+
+		// Calculate base position using trigonometry
+		let x = station.x;
+		let y = station.y;
+
+		// Determine text anchor and adjust positioning for proper text placement
+		let anchor: string;
+
+		if (normalizedAngle >= 315 || normalizedAngle < 45) {
+			// Right side (0°)
+			anchor = 'start';
+			y += textHeight * 0.3; // Adjust for vertical centering
+			x += textHeight + margin; // Position text right of the circle with margin
+		} else if (normalizedAngle >= 45 && normalizedAngle < 135) {
+			// Top side (90° - above)
+			anchor = 'middle';
+			y -= margin; // Position text baseline above the circle with margin
+		} else if (normalizedAngle >= 135 && normalizedAngle < 225) {
+			// Left side (180°)
+			anchor = 'end';
+			y = station.y + textHeight * 0.3; // Adjust for vertical centering
+			x -= textHeight + margin; // Position text left of the circle with margin
+		} else {
+			// Bottom side (270° - below)
+			anchor = 'middle';
+			y += textHeight + margin; // Position text top below the circle with margin
+		}
+
+		return { x, y, anchor };
+	}
+
+	function changeLabelAngle(stationId: string, angle: number) {
+		const station = stations.find((s) => s.id === stationId);
+		if (station) {
+			saveState();
+			station.labelAngle = angle;
+		}
 	}
 
 	function toggleStationSelection(stationId: string) {
@@ -925,6 +982,36 @@
 					}
 				});
 
+				// Ensure all stations have a labelAngle property for backward compatibility
+				stations.forEach((station) => {
+					const stationAny = station as any; // Type assertion for backward compatibility
+
+					// Handle migration from old labelPosition to new labelAngle
+					if (stationAny.labelPosition && !station.labelAngle) {
+						switch (stationAny.labelPosition) {
+							case 'above':
+								station.labelAngle = 90;
+								break;
+							case 'right':
+								station.labelAngle = 0;
+								break;
+							case 'below':
+								station.labelAngle = 270;
+								break;
+							case 'left':
+								station.labelAngle = 180;
+								break;
+							default:
+								station.labelAngle = 90; // Default to above
+						}
+						// Remove old property
+						delete stationAny.labelPosition;
+					} else if (!station.labelAngle) {
+						// No labelAngle property, set default
+						station.labelAngle = 90; // Default to above (90°)
+					}
+				});
+
 				// Ensure all lines have a name property for backward compatibility
 				lines.forEach((line, index) => {
 					if (!line.name) {
@@ -1078,6 +1165,53 @@
 							value={station.color}
 							onchange={(color) => changeStationColor(station.id, color)}
 						/>
+
+						<!-- Label Position Controls -->
+						<div
+							class="flex items-center gap-1 rounded-md border border-slate-600 bg-slate-700 p-1"
+						>
+							<button
+								onclick={() => changeLabelAngle(station.id, 90)}
+								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
+								90
+									? 'bg-blue-600 text-white'
+									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
+								title="Position label above (90°)"
+							>
+								<ArrowUp size={14} />
+							</button>
+							<button
+								onclick={() => changeLabelAngle(station.id, 270)}
+								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
+								270
+									? 'bg-blue-600 text-white'
+									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
+								title="Position label below (270°)"
+							>
+								<ArrowDown size={14} />
+							</button>
+							<button
+								onclick={() => changeLabelAngle(station.id, 180)}
+								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
+								180
+									? 'bg-blue-600 text-white'
+									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
+								title="Position label left (180°)"
+							>
+								<ArrowLeft size={14} />
+							</button>
+							<button
+								onclick={() => changeLabelAngle(station.id, 0)}
+								class="flex h-8 w-8 items-center justify-center rounded-md transition-colors {station.labelAngle ===
+								0
+									? 'bg-blue-600 text-white'
+									: 'text-slate-400 hover:bg-slate-600 hover:text-white'}"
+								title="Position label right (0°)"
+							>
+								<ArrowRight size={14} />
+							</button>
+						</div>
+
 						{#if selectedTool === 'station' && lines.length > 0}
 							<div class="relative">
 								<button
@@ -1416,10 +1550,11 @@
 				{/if}
 
 				<!-- Station name -->
+				{@const labelPos = getLabelPosition(station)}
 				<text
-					x={station.x}
-					y={station.y - STATION_RADIUS - 5}
-					text-anchor="middle"
+					x={labelPos.x}
+					y={labelPos.y}
+					text-anchor={labelPos.anchor}
 					font-family="Arial"
 					font-size="12"
 					font-weight="bold"
