@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ModeButton from './ModeButton.svelte';
 	import ColorSelector from './ColorSelector.svelte';
-	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X, Plus } from '@lucide/svelte';
+	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X, Plus, GripVertical } from '@lucide/svelte';
 
 	interface Station {
 		id: string;
@@ -48,6 +48,8 @@
 	let pendingConnection = $state(false);
 	let showLineSelector = $state(false);
 	let selectedLineToAddTo: string | null = $state(null);
+	let draggedStationIndex: number | null = $state(null);
+	let draggedOverIndex: number | null = $state(null);
 
 	const GRID_SIZE = 40;
 	const STATION_RADIUS = 8;
@@ -527,6 +529,107 @@
 		selectedLineToAddTo = null;
 	}
 
+	function removeStationFromLine(lineId: string, stationId: string) {
+		saveState();
+
+		const line = lines.find(l => l.id === lineId);
+		if (!line) return;
+
+		// Remove station from line's stations array
+		line.stations = line.stations.filter(id => id !== stationId);
+
+		// Remove station from line in station object
+		const station = stations.find(s => s.id === stationId);
+		if (station) {
+			station.lines = station.lines.filter(id => id !== lineId);
+			
+			// Update interchange status
+			station.isInterchange = station.lines.length > 1;
+
+			// Update station color if this was the line providing its color
+			if (station.lines.length === 0) {
+				station.color = '#000000';
+			} else {
+				// Use color from remaining first line
+				const firstLine = lines.find(line => line.id === station.lines[0]);
+				if (firstLine) {
+					station.color = firstLine.color;
+				}
+			}
+		}
+
+		// Remove connections involving this station on this line
+		connections = connections.filter(c => 
+			!(c.lineId === lineId && (c.from === stationId || c.to === stationId))
+		);
+
+		// Rebuild connections for the remaining stations in order
+		rebuildLineConnections(lineId);
+	}
+
+	function reorderStations(lineId: string, fromIndex: number, toIndex: number) {
+		saveState();
+
+		const line = lines.find(l => l.id === lineId);
+		if (!line) return;
+
+		// Reorder stations array
+		const stations = [...line.stations];
+		const [removed] = stations.splice(fromIndex, 1);
+		stations.splice(toIndex, 0, removed);
+		line.stations = stations;
+
+		// Rebuild connections with new order
+		rebuildLineConnections(lineId);
+	}
+
+	function rebuildLineConnections(lineId: string) {
+		const line = lines.find(l => l.id === lineId);
+		if (!line) return;
+
+		// Remove all existing connections for this line
+		connections = connections.filter(c => c.lineId !== lineId);
+
+		// Create new connections based on station order
+		for (let i = 0; i < line.stations.length - 1; i++) {
+			const connection: Connection = {
+				from: line.stations[i],
+				to: line.stations[i + 1],
+				lineId
+			};
+			connections = [...connections, connection];
+		}
+	}
+
+	function handleStationDragStart(event: DragEvent, index: number) {
+		draggedStationIndex = index;
+		if (event.dataTransfer) {
+			event.dataTransfer.effectAllowed = 'move';
+		}
+	}
+
+	function handleStationDragOver(event: DragEvent, index: number) {
+		event.preventDefault();
+		draggedOverIndex = index;
+		if (event.dataTransfer) {
+			event.dataTransfer.dropEffect = 'move';
+		}
+	}
+
+	function handleStationDrop(event: DragEvent, lineId: string, toIndex: number) {
+		event.preventDefault();
+		if (draggedStationIndex !== null && draggedStationIndex !== toIndex) {
+			reorderStations(lineId, draggedStationIndex, toIndex);
+		}
+		draggedStationIndex = null;
+		draggedOverIndex = null;
+	}
+
+	function handleStationDragEnd() {
+		draggedStationIndex = null;
+		draggedOverIndex = null;
+	}
+
 	function handlePopoverClickOutside(event: MouseEvent) {
 		if (showColorPicker) {
 			const target = event.target as HTMLElement;
@@ -646,7 +749,7 @@
 			if (wasConnectedToLine) {
 				if (station.lines.length === 0) {
 					// No lines left, revert to black
-					station.color = '#000000';
+					station.color = '#000000
 				} else {
 					// Use color from remaining first line
 					const firstLine = lines.find((line) => line.id === station.lines[0]);
@@ -904,18 +1007,16 @@
 												</button>
 											</div>
 											<div class="mb-2 sm:mb-3">
-												<p class="text-xs text-slate-300">
-													Add station to:
-												</p>
+												<p class="text-xs text-slate-300">Add station to:</p>
 											</div>
-											<div class="space-y-2 max-h-48 overflow-y-auto">
+											<div class="max-h-48 space-y-2 overflow-y-auto">
 												{#each lines as line}
 													<button
 														onclick={() => addStationsToLine(line.id)}
-														class="w-full flex items-center gap-2 p-2 rounded-md border border-slate-600 bg-slate-700 text-white transition-colors hover:bg-slate-600"
+														class="flex w-full items-center gap-2 rounded-md border border-slate-600 bg-slate-700 p-2 text-white transition-colors hover:bg-slate-600"
 													>
-														<div 
-															class="w-4 h-4 rounded-full border-2 border-white"
+														<div
+															class="h-4 w-4 rounded-full border-2 border-white"
 															style="background-color: {line.color}"
 														></div>
 														<span class="text-sm">{line.name}</span>
@@ -1083,14 +1184,14 @@
 										Add {selectedStations.length} station{selectedStations.length > 1 ? 's' : ''} to:
 									</p>
 								</div>
-								<div class="space-y-2 max-h-48 overflow-y-auto">
+								<div class="max-h-48 space-y-2 overflow-y-auto">
 									{#each lines as line}
 										<button
 											onclick={() => addStationsToLine(line.id)}
-											class="w-full flex items-center gap-2 p-2 rounded-md border border-slate-600 bg-slate-700 text-white transition-colors hover:bg-slate-600"
+											class="flex w-full items-center gap-2 rounded-md border border-slate-600 bg-slate-700 p-2 text-white transition-colors hover:bg-slate-600"
 										>
-											<div 
-												class="w-4 h-4 rounded-full border-2 border-white"
+											<div
+												class="h-4 w-4 rounded-full border-2 border-white"
 												style="background-color: {line.color}"
 											></div>
 											<span class="text-sm">{line.name}</span>
@@ -1229,19 +1330,109 @@
 		</svg>
 	</div>
 
-	{#if selectedLine}
-		{@const line = lines.find((l) => l.id === selectedLine)}
+	<!-- Station List for Selected Line or Multiple Selected Stations -->
+	{#if selectedLine || (selectedTool === 'line' && selectedStations.length >= 2)}
+		{@const line = selectedLine ? lines.find((l) => l.id === selectedLine) : null}
+		{@const displayStations = line ? line.stations : selectedStations}
+		{@const displayLineId = line ? line.id : null}
+		{@const displayLineName = line ? line.name : `Selected Stations (${selectedStations.length})`}
+		{@const displayLineColor = line ? line.color : '#64748b'}
+
 		<div class="rounded-lg border border-slate-600 bg-slate-800 p-4 shadow-sm sm:p-6">
-			<h3 class="mb-3 text-xs font-semibold text-white sm:mb-4">Name:</h3>
-			{#if line}
+			<!-- Line Header -->
+			<div class="mb-4 flex items-center gap-3">
 				<div
-					class="mb-2 flex items-center gap-3 rounded-md border border-slate-600 bg-slate-700 p-3 sm:mb-3"
-				>
-					<div
-						class="h-5 w-5 rounded-full border-2 border-slate-400 shadow-sm"
-						style="background-color: {line.color}"
-					></div>
-					<span class="text-sm text-slate-300">{line.name} - {line.stations.length} stations</span>
+					class="h-5 w-5 rounded-full border-2 border-slate-400 shadow-sm"
+					style="background-color: {displayLineColor}"
+				></div>
+				<div>
+					<h3 class="text-sm font-semibold text-white">{displayLineName}</h3>
+					<p class="text-xs text-slate-400">{displayStations.length} stations</p>
+				</div>
+			</div>
+
+			<!-- Station List -->
+			{#if displayStations.length > 0}
+				<div class="space-y-2">
+					<h4 class="text-xs font-medium tracking-wide text-slate-300 uppercase">Station Order</h4>
+					<div class="space-y-1">
+						{#each displayStations as stationId, index}
+							{@const station = stations.find((s) => s.id === stationId)}
+							{#if station}
+								<div
+									class="group hover:bg-slate-650 flex items-center gap-3 rounded-md border border-slate-600 bg-slate-700 p-3 transition-colors"
+									class:opacity-50={draggedStationIndex === index}
+									class:border-blue-500={draggedOverIndex === index && draggedStationIndex !== null}
+									draggable={!!displayLineId}
+									role={displayLineId ? 'listitem' : 'presentation'}
+									ondragstart={(e) => displayLineId && handleStationDragStart(e, index)}
+									ondragover={(e) => displayLineId && handleStationDragOver(e, index)}
+									ondrop={(e) => displayLineId && handleStationDrop(e, displayLineId, index)}
+									ondragend={handleStationDragEnd}
+								>
+									<!-- Drag Handle (only for established lines) -->
+									{#if displayLineId}
+										<div
+											class="cursor-grab text-slate-400 hover:text-slate-300 active:cursor-grabbing"
+										>
+											<GripVertical size={16} />
+										</div>
+									{/if}
+
+									<!-- Station Number -->
+									<div
+										class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-600 text-xs font-medium text-white"
+									>
+										{index + 1}
+									</div>
+
+									<!-- Station Info -->
+									<div class="flex-1">
+										<div class="flex items-center gap-2">
+											<div
+												class="h-3 w-3 rounded-full border border-white"
+												style="background-color: {station.color}"
+											></div>
+											<span class="text-sm font-medium text-white">{station.name}</span>
+											{#if station.isInterchange}
+												<span
+													class="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white"
+												>
+													Interchange
+												</span>
+											{/if}
+										</div>
+									</div>
+
+									<!-- Remove Button (only for established lines) -->
+									{#if displayLineId}
+										<button
+											onclick={() => removeStationFromLine(displayLineId, stationId)}
+											class="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-700"
+											title="Remove station from line"
+										>
+											<X size={12} />
+										</button>
+									{/if}
+								</div>
+							{/if}
+						{/each}
+					</div>
+
+					<!-- Instructions -->
+					{#if displayLineId}
+						<div class="bg-slate-750 mt-3 rounded-md p-3">
+							<p class="text-xs text-slate-400">
+								Drag stations to reorder • Click X to remove from line
+							</p>
+						</div>
+					{:else}
+						<div class="bg-slate-750 mt-3 rounded-md p-3">
+							<p class="text-xs text-slate-400">
+								Click "Link Stations" to create a line with these stations
+							</p>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
