@@ -1228,7 +1228,7 @@
 									class="inline-flex h-10 flex-row items-center justify-center rounded-md border border-blue-500 bg-blue-500 px-3 text-white transition-colors duration-150 hover:bg-blue-600"
 									title="Add to existing line"
 								>
-									<Plus size={18} /> Add to Line
+									<Plus size={18} /> <span>Add to Line</span>
 								</button>
 
 								<!-- Line Selector Popover -->
