@@ -189,7 +189,7 @@
 		const [worldX, worldY] = screenToWorld(clientX, clientY);
 		const [gridX, gridY] = snapToGrid(worldX, worldY);
 
-		const clickedStation = findStationAt(worldX, worldY);
+		const clickedStation = findStationAt(worldX, worldY, 'touches' in event);
 
 		if (clickedStation) {
 			// Clicked on an existing station
@@ -240,7 +240,7 @@
 		const [worldX, worldY] = screenToWorld(clientX, clientY);
 
 		// Check if clicking on a station first (regardless of mode)
-		const clickedStation = findStationAt(worldX, worldY);
+		const clickedStation = findStationAt(worldX, worldY, 'touches' in event);
 
 		if (clickedStation && selectedTool === 'station') {
 			// In station mode, enable dragging for the clicked station
@@ -380,11 +380,16 @@
 		stations = [...stations, newStation];
 	}
 
-	function findStationAt(x: number, y: number): Station | undefined {
+	function findStationAt(x: number, y: number, isTouch: boolean = false): Station | undefined {
+		// Use larger touch radius for better touch accessibility
+		const touchRadius = STATION_RADIUS * 4; // 32px radius for touch
+		const mouseRadius = STATION_RADIUS * 2; // 16px radius for mouse
+		const selectionRadius = isTouch ? touchRadius : mouseRadius;
+
 		return stations.find((station) => {
 			const dx = station.x - x;
 			const dy = station.y - y;
-			return Math.sqrt(dx * dx + dy * dy) <= STATION_RADIUS * 2;
+			return Math.sqrt(dx * dx + dy * dy) <= selectionRadius;
 		});
 	}
 
@@ -1556,7 +1561,7 @@
 					y={labelPos.y}
 					text-anchor={labelPos.anchor}
 					font-family="Victor Mono"
-					font-size="14"
+					font-size="12"
 					font-weight="700"
 					fill={station.color}
 					stroke={station.color}
