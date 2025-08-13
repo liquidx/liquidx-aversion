@@ -1,7 +1,18 @@
 <script lang="ts">
 	import ModeButton from './ModeButton.svelte';
 	import ColorSelector from './ColorSelector.svelte';
-	import { MapPin, Route, Link2, Trash2, Undo2, Save, FolderOpen, X, Plus, GripVertical } from '@lucide/svelte';
+	import {
+		MapPin,
+		Route,
+		Link2,
+		Trash2,
+		Undo2,
+		Save,
+		FolderOpen,
+		X,
+		Plus,
+		GripVertical
+	} from '@lucide/svelte';
 
 	interface Station {
 		id: string;
@@ -210,7 +221,7 @@
 
 		// Check if clicking on a station first (regardless of mode)
 		const clickedStation = findStationAt(worldX, worldY);
-		
+
 		if (clickedStation && selectedTool === 'station') {
 			// In station mode, enable dragging for the clicked station
 			saveState(); // Save state before dragging starts
@@ -454,7 +465,7 @@
 
 		saveState();
 
-		const line = lines.find(l => l.id === lineId);
+		const line = lines.find((l) => l.id === lineId);
 		if (!line) return;
 
 		// Add stations to the line
@@ -462,17 +473,17 @@
 			const station = stations.find((s) => s.id === stationId);
 			if (station && !station.lines.includes(lineId)) {
 				station.lines = [...station.lines, lineId];
-				
+
 				// Set station color to the line color if it's the first line
 				if (station.lines.length === 1) {
 					station.color = line.color;
 				}
-				
+
 				// Mark as interchange if connected to multiple lines
 				if (station.lines.length > 1) {
 					station.isInterchange = true;
 				}
-				
+
 				// Add station to line's stations array if not already there
 				if (!line.stations.includes(stationId)) {
 					line.stations = [...line.stations, stationId];
@@ -483,7 +494,7 @@
 		// Create connections between the new stations and existing stations on the line
 		// For simplicity, we'll connect each new station to the nearest existing station on the line
 		selectedStations.forEach((newStationId) => {
-			const newStation = stations.find(s => s.id === newStationId);
+			const newStation = stations.find((s) => s.id === newStationId);
 			if (!newStation) return;
 
 			// Find the closest existing station on this line
@@ -491,12 +502,13 @@
 			let minDistance = Infinity;
 
 			stations.forEach((station) => {
-				if (station.id !== newStationId && 
-				    station.lines.includes(lineId) && 
-				    !selectedStations.includes(station.id)) {
+				if (
+					station.id !== newStationId &&
+					station.lines.includes(lineId) &&
+					!selectedStations.includes(station.id)
+				) {
 					const distance = Math.sqrt(
-						Math.pow(station.x - newStation.x, 2) + 
-						Math.pow(station.y - newStation.y, 2)
+						Math.pow(station.x - newStation.x, 2) + Math.pow(station.y - newStation.y, 2)
 					);
 					if (distance < minDistance) {
 						minDistance = distance;
@@ -508,9 +520,10 @@
 			// Create connection to the closest station
 			if (closestStation !== null) {
 				const closestStationId = (closestStation as Station).id;
-				const connectionExists = connections.some(c => 
-					(c.from === newStationId && c.to === closestStationId && c.lineId === lineId) ||
-					(c.from === closestStationId && c.to === newStationId && c.lineId === lineId)
+				const connectionExists = connections.some(
+					(c) =>
+						(c.from === newStationId && c.to === closestStationId && c.lineId === lineId) ||
+						(c.from === closestStationId && c.to === newStationId && c.lineId === lineId)
 				);
 
 				if (!connectionExists) {
@@ -532,17 +545,17 @@
 	function removeStationFromLine(lineId: string, stationId: string) {
 		saveState();
 
-		const line = lines.find(l => l.id === lineId);
+		const line = lines.find((l) => l.id === lineId);
 		if (!line) return;
 
 		// Remove station from line's stations array
-		line.stations = line.stations.filter(id => id !== stationId);
+		line.stations = line.stations.filter((id) => id !== stationId);
 
 		// Remove station from line in station object
-		const station = stations.find(s => s.id === stationId);
+		const station = stations.find((s) => s.id === stationId);
 		if (station) {
-			station.lines = station.lines.filter(id => id !== lineId);
-			
+			station.lines = station.lines.filter((id) => id !== lineId);
+
 			// Update interchange status
 			station.isInterchange = station.lines.length > 1;
 
@@ -551,7 +564,7 @@
 				station.color = '#000000';
 			} else {
 				// Use color from remaining first line
-				const firstLine = lines.find(line => line.id === station.lines[0]);
+				const firstLine = lines.find((line) => line.id === station.lines[0]);
 				if (firstLine) {
 					station.color = firstLine.color;
 				}
@@ -559,8 +572,8 @@
 		}
 
 		// Remove connections involving this station on this line
-		connections = connections.filter(c => 
-			!(c.lineId === lineId && (c.from === stationId || c.to === stationId))
+		connections = connections.filter(
+			(c) => !(c.lineId === lineId && (c.from === stationId || c.to === stationId))
 		);
 
 		// Rebuild connections for the remaining stations in order
@@ -570,7 +583,7 @@
 	function reorderStations(lineId: string, fromIndex: number, toIndex: number) {
 		saveState();
 
-		const line = lines.find(l => l.id === lineId);
+		const line = lines.find((l) => l.id === lineId);
 		if (!line) return;
 
 		// Reorder stations array
@@ -584,11 +597,11 @@
 	}
 
 	function rebuildLineConnections(lineId: string) {
-		const line = lines.find(l => l.id === lineId);
+		const line = lines.find((l) => l.id === lineId);
 		if (!line) return;
 
 		// Remove all existing connections for this line
-		connections = connections.filter(c => c.lineId !== lineId);
+		connections = connections.filter((c) => c.lineId !== lineId);
 
 		// Create new connections based on station order
 		for (let i = 0; i < line.stations.length - 1; i++) {
@@ -641,7 +654,7 @@
 				cancelConnection();
 			}
 		}
-		
+
 		if (showLineSelector) {
 			const target = event.target as HTMLElement;
 			const popover = target.closest('.line-selector-popover');
@@ -749,7 +762,7 @@
 			if (wasConnectedToLine) {
 				if (station.lines.length === 0) {
 					// No lines left, revert to black
-					station.color = '#000000
+					station.color = '#000000';
 				} else {
 					// Use color from remaining first line
 					const firstLine = lines.find((line) => line.id === station.lines[0]);
