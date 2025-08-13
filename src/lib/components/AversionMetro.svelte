@@ -1014,7 +1014,7 @@
 						}
 						// Remove old property
 						delete stationAny.labelPosition;
-					} else if (!station.labelAngle) {
+					} else if (station.labelAngle === undefined) {
 						// No labelAngle property, set default
 						station.labelAngle = 90; // Default to above (90°)
 					}
