@@ -61,12 +61,18 @@
 	let selectedLineToAddTo: string | null = $state(null);
 	let draggedStationIndex: number | null = $state(null);
 	let draggedOverIndex: number | null = $state(null);
+	let pinching = $state(false);
+	let lastPinchDistance = $state(0);
+	let pinchCenter = $state({ x: 0, y: 0 });
+	let recentlyPinched = $state(false);
 
 	const GRID_SIZE = 40;
 	const STATION_RADIUS = 8;
 	const LINE_WIDTH = 6;
 	const SVG_WIDTH = 800;
 	const SVG_HEIGHT = 600;
+	const MIN_ZOOM = 0.1;
+	const MAX_ZOOM = 5.0;
 
 	let viewBox = $state({ x: 0, y: 0, width: SVG_WIDTH, height: SVG_HEIGHT });
 
@@ -171,7 +177,7 @@
 	}
 
 	function handleSvgClick(event: MouseEvent | TouchEvent) {
-		if (dragging || panning || hasPanned) return;
+		if (dragging || panning || hasPanned || recentlyPinched) return;
 
 		const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
@@ -215,6 +221,15 @@
 
 	function handleSvgMouseDown(event: MouseEvent | TouchEvent) {
 		event.preventDefault(); // Prevent touch scrolling
+		
+		// Handle multi-touch pinch gestures
+		if ('touches' in event && event.touches.length === 2) {
+			pinching = true;
+			lastPinchDistance = getTouchDistance(event.touches[0], event.touches[1]);
+			pinchCenter = getTouchCenter(event.touches[0], event.touches[1]);
+			return;
+		}
+		
 		const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
 		const [worldX, worldY] = screenToWorld(clientX, clientY);
@@ -249,6 +264,21 @@
 
 	function handleSvgMouseMove(event: MouseEvent | TouchEvent) {
 		if ('touches' in event && event.touches.length === 0) return; // No touch points
+
+		// Handle pinch zoom
+		if ('touches' in event && event.touches.length === 2 && pinching) {
+			const currentDistance = getTouchDistance(event.touches[0], event.touches[1]);
+			const currentCenter = getTouchCenter(event.touches[0], event.touches[1]);
+			
+			if (lastPinchDistance > 0) {
+				const scale = currentDistance / lastPinchDistance;
+				zoomViewBox(scale, currentCenter.x, currentCenter.y);
+			}
+			
+			lastPinchDistance = currentDistance;
+			pinchCenter = currentCenter;
+			return;
+		}
 
 		const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
 		const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
@@ -298,7 +328,31 @@
 				hasPanned = false;
 			}, 0);
 		}
+		if (pinching) {
+			pinching = false;
+			lastPinchDistance = 0;
+			recentlyPinched = true;
+			// Clear the recently pinched flag after a short delay
+			setTimeout(() => {
+				recentlyPinched = false;
+			}, 100);
+		}
 		svgElement.style.cursor = selectedTool === 'station' ? 'crosshair' : 'default';
+	}
+
+	function handleSvgWheel(event: WheelEvent) {
+		event.preventDefault(); // Prevent page scroll
+		
+		// Determine zoom direction and scale
+		const zoomSpeed = 0.1;
+		const zoomIn = event.deltaY < 0;
+		const scale = zoomIn ? 1 + zoomSpeed : 1 - zoomSpeed;
+		
+		// Use mouse position as zoom center
+		const centerX = event.clientX;
+		const centerY = event.clientY;
+		
+		zoomViewBox(scale, centerX, centerY);
 	}
 
 	function addStation(x: number, y: number) {
@@ -382,6 +436,39 @@
 		const projY = y1 + t * dy;
 
 		return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+	}
+
+	// Pinch gesture helper functions
+	function getTouchDistance(touch1: Touch, touch2: Touch): number {
+		const dx = touch1.clientX - touch2.clientX;
+		const dy = touch1.clientY - touch2.clientY;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	function getTouchCenter(touch1: Touch, touch2: Touch): { x: number; y: number } {
+		return {
+			x: (touch1.clientX + touch2.clientX) / 2,
+			y: (touch1.clientY + touch2.clientY) / 2
+		};
+	}
+
+	function zoomViewBox(scale: number, centerX: number, centerY: number) {
+		const [worldCenterX, worldCenterY] = screenToWorld(centerX, centerY);
+		
+		// Calculate new dimensions
+		const newWidth = Math.max(SVG_WIDTH * MIN_ZOOM, Math.min(SVG_WIDTH * MAX_ZOOM, viewBox.width / scale));
+		const newHeight = Math.max(SVG_HEIGHT * MIN_ZOOM, Math.min(SVG_HEIGHT * MAX_ZOOM, viewBox.height / scale));
+		
+		// Calculate new position to keep the center point fixed
+		const newX = worldCenterX - (newWidth * (worldCenterX - viewBox.x)) / viewBox.width;
+		const newY = worldCenterY - (newHeight * (worldCenterY - viewBox.y)) / viewBox.height;
+		
+		viewBox = {
+			x: newX,
+			y: newY,
+			width: newWidth,
+			height: newHeight
+		};
 	}
 
 	function toggleStationSelection(stationId: string) {
@@ -1240,6 +1327,7 @@
 			ontouchstart={handleSvgMouseDown}
 			ontouchmove={handleSvgMouseMove}
 			ontouchend={handleSvgMouseUp}
+			onwheel={handleSvgWheel}
 			class="block min-h-96 cursor-crosshair touch-none select-none sm:min-h-[600px]"
 			style="max-width: 100%; touch-action: none;"
 		>
