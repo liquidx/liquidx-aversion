@@ -1555,10 +1555,11 @@
 					x={labelPos.x}
 					y={labelPos.y}
 					text-anchor={labelPos.anchor}
-					font-family="Arial"
-					font-size="12"
-					font-weight="bold"
+					font-family="Victor Mono"
+					font-size="14"
+					font-weight="700"
 					fill={station.color}
+					stroke={station.color}
 				>
 					{station.name}
 				</text>
