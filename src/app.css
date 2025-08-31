@@ -2,10 +2,11 @@
 
 @theme {
   --font-mono: "Victor Mono", "monospace";
+  --font-oldbrowser: "Tahoma", "MS Sans Serif", sans-serif;
 }
 
 @layer base {
-  * {
+  body {
     @apply font-mono;
   }
   body {
