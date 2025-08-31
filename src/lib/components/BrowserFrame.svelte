@@ -28,7 +28,7 @@
 </svelte:head>
 
 <div
-	class="font-oldbrowser mx-auto mt-8 w-[800px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs shadow-lg"
+	class="font-oldbrowser mx-auto mt-8 w-[800px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs text-gray-600 shadow-lg"
 >
 	<div
 		class="flex items-center justify-between bg-gradient-to-r from-blue-800 to-blue-400 px-2 py-1 font-bold text-white select-none"
@@ -41,7 +41,7 @@
 		</div>
 	</div>
 
-	<div class="flex p-0.5 text-gray-600 select-none">
+	<div class="flex p-0.5 select-none">
 		<span class="mr-0.5 px-1.5 py-0.5"><u>F</u>ile</span>
 		<span class="mr-0.5 px-1.5 py-0.5"><u>E</u>dit</span>
 		<span class="mr-0.5 px-1.5 py-0.5"><u>V</u>iew</span>
@@ -64,19 +64,19 @@
 		<BrowserFrameButton variant="stop">Stop</BrowserFrameButton>
 	</div>
 
-	<div class="flex items-center p-1 text-gray-600">
+	<div class="flex items-center p-1">
 		<label for="location-input" class="mr-2 font-bold">Location:</label>
 		<input
 			id="location-input"
 			type="text"
-			class="font-inherit flex-grow border-2 border-t-gray-600 border-r-gray-100 border-b-gray-100 border-l-gray-600 bg-white px-0.5 py-0.5 text-gray-600 text-inherit"
+			class="font-inherit flex-grow border-2 border-t-gray-600 border-r-gray-100 border-b-gray-100 border-l-gray-600 bg-white px-0.5 py-0.5 text-inherit"
 			bind:value={currentUrl}
 			onkeydown={handleKeyDown}
 		/>
 	</div>
 
 	<div
-		class="content-area m-1 h-96 overflow-y-auto border-2 border-t-gray-500 border-r-white border-b-white border-l-gray-500 bg-white p-2.5"
+		class=" content-area m-1 h-96 overflow-y-auto border-2 border-t-gray-500 border-r-white border-b-white border-l-gray-500 bg-white p-2.5"
 	>
 		{@html contents}
 	</div>
