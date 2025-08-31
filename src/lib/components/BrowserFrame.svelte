@@ -76,7 +76,7 @@
 	</div>
 
 	<div
-		class=" content-area m-1 h-96 overflow-y-auto border-2 border-t-gray-500 border-r-white border-b-white border-l-gray-500 bg-white p-2.5"
+		class="content-area m-1 h-96 overflow-y-auto border-2 border-t-gray-500 border-r-white border-b-white border-l-gray-500 bg-white p-2.5 text-gray-600"
 	>
 		{@html contents}
 	</div>
