@@ -2,6 +2,6 @@
 	import AversionMindNavigator from '$lib/components/AversionMindNavigator.svelte';
 </script>
 
-<div class="min-h-screen" style="background-color: #008080;">
+<div class="rounded-xl p-4" style="background-color: #008080;">
 	<AversionMindNavigator />
 </div>

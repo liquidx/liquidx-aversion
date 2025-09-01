@@ -28,7 +28,7 @@
 </svelte:head>
 
 <div
-	class="font-oldbrowser mx-auto mt-8 w-[800px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs text-gray-600 shadow-lg"
+	class="font-oldbrowser mx-auto my-8 w-[800px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs text-gray-600 shadow-lg"
 >
 	<div
 		class="flex items-center justify-between bg-gradient-to-r from-blue-800 to-blue-400 px-2 py-1 font-bold text-white select-none"
