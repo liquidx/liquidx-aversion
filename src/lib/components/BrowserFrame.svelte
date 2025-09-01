@@ -5,6 +5,7 @@
 	import BrowserFrameLoadingIndicator from './BrowserFrameLoadingIndicator.svelte';
 
 	let currentUrl = $state('http://llmavigator.liquidx.net/');
+	let browserTitle = $state('Letscape Lavigator M');
 
 	interface Props {
 		contents?: string;
@@ -43,24 +44,26 @@
 
 	// Create a data URL for the iframe
 	function createDataUrl(htmlContent: string): string {
-		const clickInterceptScript = 
-			'<scr' + 'ipt>' +
+		const clickInterceptScript =
+			'<scr' +
+			'ipt>' +
 			'document.addEventListener("DOMContentLoaded", function() {' +
-				'document.addEventListener("click", function(e) {' +
-					'if (e.target.tagName === "A" && e.target.href) {' +
-						'e.preventDefault();' +
-						'const url = e.target.href;' +
-						'const text = e.target.textContent || e.target.innerText || "";' +
-						'window.parent.postMessage({' +
-							'type: "linkClick",' +
-							'url: url,' +
-							'text: text.trim()' +
-						'}, "*");' +
-					'}' +
-				'});' +
+			'document.addEventListener("click", function(e) {' +
+			'if (e.target.tagName === "A" && e.target.href) {' +
+			'e.preventDefault();' +
+			'const url = e.target.href;' +
+			'const text = e.target.textContent || e.target.innerText || "";' +
+			'window.parent.postMessage({' +
+			'type: "linkClick",' +
+			'url: url,' +
+			'text: text.trim()' +
+			'}, "*");' +
+			'}' +
 			'});' +
-			'</scr' + 'ipt>';
-		
+			'});' +
+			'</scr' +
+			'ipt>';
+
 		// Inject the script at the end of the HTML content
 		const modifiedHtml = htmlContent + clickInterceptScript;
 		return `data:text/html;charset=utf-8,${encodeURIComponent(modifiedHtml)}`;
@@ -87,7 +90,7 @@
 		if (url.startsWith('http://') || url.startsWith('https://')) {
 			return url;
 		}
-		
+
 		// Handle relative paths
 		try {
 			return new URL(url, baseUrl).href;
@@ -113,27 +116,29 @@
 			// Generate URL path from the link text (ignore event.data.url as it's a data URL)
 			const pathFromText = textToUrlPath(event.data.text);
 			const urlPath = pathFromText ? `/${pathFromText}` : '/';
-			
+
 			const resolvedUrl = resolveUrl(urlPath, currentUrl);
-			
+
 			// Update location bar to show the new URL (this won't trigger handleKeyDown)
 			currentUrl = resolvedUrl;
-			
-			onlinkclick?.(new CustomEvent('linkclick', { 
-				detail: { 
-					url: resolvedUrl, 
-					text: event.data.text 
-				} 
-			}));
+
+			onlinkclick?.(
+				new CustomEvent('linkclick', {
+					detail: {
+						url: resolvedUrl,
+						text: event.data.text
+					}
+				})
+			);
 		}
 	}
 
 	// Set up message listener using $effect
 	$effect(() => {
 		if (!browser) return;
-		
+
 		window.addEventListener('message', handleMessage);
-		
+
 		return () => {
 			window.removeEventListener('message', handleMessage);
 		};
@@ -141,7 +146,7 @@
 </script>
 
 <svelte:head>
-	<title>Mosaic Netscape 0.9</title>
+	<title>{browserTitle}</title>
 </svelte:head>
 
 <div
@@ -150,7 +155,7 @@
 	<div
 		class="flex items-center justify-between bg-gradient-to-r from-blue-800 to-blue-400 px-2 py-1 font-bold text-white select-none"
 	>
-		<div>Mosaic Netscape 0.9</div>
+		<div>{browserTitle}</div>
 		<div class="flex">
 			<BrowserFrameWindowButton type="minimize" />
 			<BrowserFrameWindowButton type="maximize" />
@@ -173,8 +178,12 @@
 		class="flex items-center justify-between border-t border-b border-t-white border-b-gray-500 p-1"
 	>
 		<div class="flex">
-			<BrowserFrameButton onclick={canGoBack ? onback : undefined} disabled={!canGoBack}>Back</BrowserFrameButton>
-			<BrowserFrameButton onclick={canGoForward ? onforward : undefined} disabled={!canGoForward}>Forward</BrowserFrameButton>
+			<BrowserFrameButton onclick={canGoBack ? onback : undefined} disabled={!canGoBack}
+				>Back</BrowserFrameButton
+			>
+			<BrowserFrameButton onclick={canGoForward ? onforward : undefined} disabled={!canGoForward}
+				>Forward</BrowserFrameButton
+			>
 			<BrowserFrameButton>Home</BrowserFrameButton>
 			<BrowserFrameButton onclick={onreload}>Reload</BrowserFrameButton>
 			<BrowserFrameButton>Images</BrowserFrameButton>
