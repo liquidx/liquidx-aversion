@@ -48,7 +48,7 @@
 
 			if (response.ok) {
 				const data = await response.json();
-				console.log('API response:', data);
+				//console.log('API response:', data);
 
 				// Filter out backticks, HTML markdown code blocks, and doctype tags
 				let cleanedResult = data.result
