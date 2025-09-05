@@ -4,7 +4,7 @@
 	import BrowserFrameWindowButton from './BrowserFrameWindowButton.svelte';
 	import BrowserFrameLoadingIndicator from './BrowserFrameLoadingIndicator.svelte';
 
-	let currentUrl = $state('http://llmavigator.liquidx.net/');
+	let currentUrl = $state('');
 	let browserTitle = $state('Letscape Lavigator M');
 
 	interface Props {
@@ -18,12 +18,11 @@
 		onback?: () => void;
 		onforward?: () => void;
 		onreload?: () => void;
+		onhome?: () => void;
 	}
 
 	let {
-		contents = `<h1>Welcome to LLMavigator</h1>
-		<p>Your journey through the vast seas of Large Language Models begins here.</p>
-	`,
+		contents,
 		loading = false,
 		canGoBack = false,
 		canGoForward = false,
@@ -32,7 +31,8 @@
 		onlinkclick,
 		onback,
 		onforward,
-		onreload
+		onreload,
+		onhome
 	}: Props = $props();
 
 	// Update currentUrl when prop changes (for back navigation)
@@ -74,13 +74,24 @@
 
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			// Add http:// if URL doesn't start with http:// or https://
-			let url = currentUrl;
+			// Convert spaces to dots and add http:// if URL doesn't start with http:// or https://
+			let url = currentUrl.replace(/\s+/g, '.');
 			if (!url.startsWith('http://') && !url.startsWith('https://')) {
 				url = 'http://' + url;
-				currentUrl = url; // Update the input field
 			}
+			currentUrl = url; // Update the input field
 			onurlchange?.(new CustomEvent('urlchange', { detail: { url } }));
+		}
+	}
+
+	function handleFocus(event: FocusEvent) {
+		if (currentUrl === '') {
+			currentUrl = 'http://';
+			// Move cursor to the end
+			setTimeout(() => {
+				const input = event.target as HTMLInputElement;
+				input.setSelectionRange(input.value.length, input.value.length);
+			}, 0);
 		}
 	}
 
@@ -112,12 +123,29 @@
 
 	// Handle messages from iframe
 	function handleMessage(event: MessageEvent) {
+		console.log('handleMessage', event.data);
 		if (event.data && event.data.type === 'linkClick') {
-			// Generate URL path from the link text (ignore event.data.url as it's a data URL)
-			const pathFromText = textToUrlPath(event.data.text);
-			const urlPath = pathFromText ? `/${pathFromText}` : '/';
+			let resolvedUrl: string;
 
-			const resolvedUrl = resolveUrl(urlPath, currentUrl);
+			// If the URL starts with http, use it directly
+			if (event.data.url.startsWith('http://') || event.data.url.startsWith('https://')) {
+				resolvedUrl = event.data.url;
+			} else if (event.data.url.startsWith('data:')) {
+				// If it's a data URL, generate URL path from the link text
+				const pathFromText = textToUrlPath(event.data.text);
+				const urlPath = pathFromText ? `/${pathFromText}` : '/';
+				
+				// Use default base URL if currentUrl is blank or has no hostname
+				let baseUrl = currentUrl;
+				if (!baseUrl || !baseUrl.includes('://') || baseUrl === 'http://') {
+					baseUrl = 'http://lets.llm/';
+				}
+				
+				resolvedUrl = resolveUrl(urlPath, baseUrl);
+			} else {
+				// For other schemes, use resolveUrl
+				resolvedUrl = resolveUrl(event.data.url, currentUrl);
+			}
 
 			// Update location bar to show the new URL (this won't trigger handleKeyDown)
 			currentUrl = resolvedUrl;
@@ -184,7 +212,7 @@
 			<BrowserFrameButton onclick={canGoForward ? onforward : undefined} disabled={!canGoForward}
 				>Forward</BrowserFrameButton
 			>
-			<BrowserFrameButton>Home</BrowserFrameButton>
+			<BrowserFrameButton onclick={onhome}>Home</BrowserFrameButton>
 			<BrowserFrameButton onclick={onreload}>Reload</BrowserFrameButton>
 			<BrowserFrameButton>Images</BrowserFrameButton>
 			<BrowserFrameButton>Open</BrowserFrameButton>
@@ -203,6 +231,7 @@
 			class="font-inherit flex-grow border-2 border-t-gray-600 border-r-gray-100 border-b-gray-100 border-l-gray-600 bg-white px-0.5 py-0.5 text-inherit"
 			bind:value={currentUrl}
 			onkeydown={handleKeyDown}
+			onfocus={handleFocus}
 		/>
 	</div>
 
