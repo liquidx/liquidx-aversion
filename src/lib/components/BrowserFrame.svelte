@@ -95,6 +95,16 @@
 		}
 	}
 
+	function handleGoClick() {
+		// Same logic as pressing Enter in the input field
+		let url = currentUrl.replace(/\s+/g, '.');
+		if (!url.startsWith('http://') && !url.startsWith('https://')) {
+			url = 'http://' + url;
+		}
+		currentUrl = url;
+		onurlchange?.(new CustomEvent('urlchange', { detail: { url } }));
+	}
+
 	// Resolve relative URLs against current URL
 	function resolveUrl(url: string, baseUrl: string): string {
 		// If URL starts with http/https, it's already absolute
@@ -134,13 +144,13 @@
 				// If it's a data URL, generate URL path from the link text
 				const pathFromText = textToUrlPath(event.data.text);
 				const urlPath = pathFromText ? `/${pathFromText}` : '/';
-				
+
 				// Use default base URL if currentUrl is blank or has no hostname
 				let baseUrl = currentUrl;
 				if (!baseUrl || !baseUrl.includes('://') || baseUrl === 'http://') {
 					baseUrl = 'http://lets.llm/';
 				}
-				
+
 				resolvedUrl = resolveUrl(urlPath, baseUrl);
 			} else {
 				// For other schemes, use resolveUrl
@@ -178,7 +188,7 @@
 </svelte:head>
 
 <div
-	class="font-oldbrowser mx-auto my-8 w-[800px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs text-gray-600 shadow-lg"
+	class="font-oldbrowser mx-auto my-8 w-[320px] border-2 border-t-white border-r-gray-600 border-b-gray-600 border-l-white bg-gray-300 text-xs text-gray-600 shadow-lg md:w-[800px]"
 >
 	<div
 		class="flex items-center justify-between bg-gradient-to-r from-blue-800 to-blue-400 px-2 py-1 font-bold text-white select-none"
@@ -191,7 +201,7 @@
 		</div>
 	</div>
 
-	<div class="flex p-0.5 select-none">
+	<div class="flex flex-nowrap overflow-x-clip p-0.5 select-none">
 		<span class="mr-0.5 px-1.5 py-0.5"><u>F</u>ile</span>
 		<span class="mr-0.5 px-1.5 py-0.5"><u>E</u>dit</span>
 		<span class="mr-0.5 px-1.5 py-0.5"><u>V</u>iew</span>
@@ -203,9 +213,9 @@
 	</div>
 
 	<div
-		class="flex items-center justify-between border-t border-b border-t-white border-b-gray-500 p-1"
+		class="flex items-center justify-between overflow-x-clip border-t border-b border-t-white border-b-gray-500 p-1"
 	>
-		<div class="flex">
+		<div class="flex flex-wrap">
 			<BrowserFrameButton onclick={canGoBack ? onback : undefined} disabled={!canGoBack}
 				>Back</BrowserFrameButton
 			>
@@ -214,17 +224,13 @@
 			>
 			<BrowserFrameButton onclick={onhome}>Home</BrowserFrameButton>
 			<BrowserFrameButton onclick={onreload}>Reload</BrowserFrameButton>
-			<BrowserFrameButton>Images</BrowserFrameButton>
-			<BrowserFrameButton>Open</BrowserFrameButton>
-			<BrowserFrameButton>Print</BrowserFrameButton>
-			<BrowserFrameButton>Find</BrowserFrameButton>
 			<BrowserFrameButton disabled={!loading}>Stop</BrowserFrameButton>
 		</div>
 		<BrowserFrameLoadingIndicator {loading} />
 	</div>
 
 	<div class="flex items-center p-1">
-		<label for="location-input" class="mr-2 font-bold">Location:</label>
+		<label for="location-input" class="mx-2 font-bold">Location:</label>
 		<input
 			id="location-input"
 			type="text"
@@ -233,6 +239,9 @@
 			onkeydown={handleKeyDown}
 			onfocus={handleFocus}
 		/>
+		<div class="mx-2">
+			<BrowserFrameButton onclick={handleGoClick}>Go</BrowserFrameButton>
+		</div>
 	</div>
 
 	<div
