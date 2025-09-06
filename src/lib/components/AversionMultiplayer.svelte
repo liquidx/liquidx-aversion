@@ -10,13 +10,27 @@
 		id: string;
 		username: string;
 		isOnline: boolean;
-		isAI: boolean;
+		isBot: boolean;
+		personality: string;
 	}
 
 	let participants: Participant[] = [
-		{ id: '0', username: 'You', isOnline: true, isAI: false },
-		{ id: '1', username: 'alice', isOnline: true, isAI: true },
-		{ id: '2', username: 'bob', isOnline: true, isAI: true }
+		{ id: '0', username: 'You', isOnline: true, isBot: false, personality: 'Human user' },
+		{
+			id: '1',
+			username: 'alice',
+			isOnline: true,
+			isBot: true,
+			personality: 'Friendly and enthusiastic, uses emojis and speaks like a Gen Z'
+		},
+		{
+			id: '2',
+			username: 'bob',
+			isOnline: true,
+			isBot: true,
+			personality:
+				'Thoughtful and analytical, prefers deeper conversations and sharing insights. Speaks as a millenial.'
+		}
 	];
 
 	let messages: ChatMessage[] = [
@@ -29,7 +43,7 @@
 		{
 			id: '2',
 			username: 'bob',
-			message: 'Hello alice, how are you doing?',
+			message: 'Hello alice!',
 			timestamp: new Date(Date.now() - 240000)
 		}
 	];
@@ -49,23 +63,30 @@
 
 	function formatChatDialog(): string {
 		return messages
-			.map(msg => `[${formatTime(msg.timestamp)}] <${msg.username}> ${msg.message}`)
+			.map((msg) => `[${formatTime(msg.timestamp)}] <${msg.username}> ${msg.message}`)
+			.join('\n');
+	}
+
+	function formatParticipantDescriptions(): string {
+		return participants
+			.map((p) => `- ${p.username} (${p.isBot ? 'Bot' : 'Human'}): ${p.personality}`)
 			.join('\n');
 	}
 
 	async function getAIResponse() {
 		if (isLoadingAI) return;
-		
+
 		isLoadingAI = true;
 		try {
 			const chatDialog = formatChatDialog();
-			
+			const participantDescriptions = formatParticipantDescriptions();
+
 			const response = await fetch('/api/multiplayer', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ chatDialog })
+				body: JSON.stringify({ chatDialog, participants: participantDescriptions })
 			});
 
 			if (!response.ok) {
@@ -73,10 +94,10 @@
 			}
 
 			const result = await response.json();
-			
+
 			// Check if nextUser is one of our AI participants
-			const aiParticipant = participants.find(p => p.isAI && p.username === result.nextUser);
-			
+			const aiParticipant = participants.find((p) => p.isBot && p.username === result.nextUser);
+
 			if (aiParticipant && result.message) {
 				const newMessage: ChatMessage = {
 					id: Date.now().toString(),
@@ -103,10 +124,10 @@
 			};
 			messages = [...messages, newMessage];
 			currentMessage = '';
-			
+
 			// Refocus the input element after sending message
 			setTimeout(() => inputElement?.focus(), 0);
-			
+
 			// Automatically trigger AI response after user sends message
 			await getAIResponse();
 		}
@@ -141,7 +162,7 @@
 					<span class="text-xs text-white {participant.isOnline ? '' : 'opacity-60'}"
 						>{participant.username}</span
 					>
-					{#if participant.isAI}
+					{#if participant.isBot}
 						<span class="ml-auto text-xs text-purple-400">AI</span>
 					{/if}
 				</div>
