@@ -8,7 +8,7 @@
 	let browserTitle = $state('Letscape Lavigator M');
 
 	interface Props {
-		contents?: string;
+		contents: string;
 		loading?: boolean;
 		canGoBack?: boolean;
 		canGoForward?: boolean;
@@ -22,7 +22,7 @@
 	}
 
 	let {
-		contents,
+		contents = '',
 		loading = false,
 		canGoBack = false,
 		canGoForward = false,
