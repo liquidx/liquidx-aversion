@@ -17,7 +17,7 @@
 		<a class="hover:underline" href={path}>{title}</a>
 	</div>
 	{#if description}
-		<p class="mt-2 text-xs text-neutral-500">{description}</p>
+		<div class="mt-2 text-xs text-neutral-500">{@html description}</div>
 	{/if}
 	<div class="my-4 text-xs text-neutral-600">{yearMonth}</div>
 </li>
