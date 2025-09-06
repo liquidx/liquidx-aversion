@@ -53,6 +53,9 @@
 	let isLoadingAI = false;
 	let inputElement: HTMLInputElement | undefined;
 
+	// Reactive variable for max bot conversation turns (double the number of bots)
+	$: maxBotTurns = participants.filter((p) => p.isBot).length * 2;
+
 	function formatTime(timestamp: Date): string {
 		return timestamp.toLocaleTimeString('en-US', {
 			hour12: false,
@@ -73,13 +76,71 @@
 			.join('\n');
 	}
 
+	function areLastNMessagesFromBots(n: number = 4): boolean {
+		if (messages.length < n) return false;
+
+		const lastN = messages.slice(-n);
+		return lastN.every((msg) => {
+			const participant = participants.find((p) => p.username === msg.username);
+			return participant?.isBot === true;
+		});
+	}
+
+	function handleInviteCommand(message: string): boolean {
+		const inviteMatch = message.match(/^\/invite\s+(\S+)\s+(.+)$/);
+		if (!inviteMatch) return false;
+
+		const [, username, personality] = inviteMatch;
+
+		// Check if participant already exists
+		if (participants.find((p) => p.username === username)) {
+			const systemMessage: ChatMessage = {
+				id: Date.now().toString(),
+				username: 'System',
+				message: `Participant "${username}" already exists in the chat.`,
+				timestamp: new Date()
+			};
+			messages = [...messages, systemMessage];
+			return true;
+		}
+
+		// Add new bot participant
+		const newParticipant: Participant = {
+			id: Date.now().toString(),
+			username: username,
+			isOnline: true,
+			isBot: true,
+			personality: personality.trim()
+		};
+		participants = [...participants, newParticipant];
+
+		// Add system message about the new participant
+		const systemMessage: ChatMessage = {
+			id: Date.now().toString(),
+			username: 'System',
+			message: `${username} has joined the chat.`,
+			timestamp: new Date()
+		};
+		messages = [...messages, systemMessage];
+
+		return true;
+	}
+
 	async function getAIResponse() {
 		if (isLoadingAI) return;
+
+		// Stop generating AI responses if last N messages are all from bots (N = double the bot count)
+		if (areLastNMessagesFromBots(maxBotTurns)) {
+			console.log(`Last ${maxBotTurns} messages are from bots, waiting for human input`);
+			return;
+		}
 
 		isLoadingAI = true;
 		try {
 			const chatDialog = formatChatDialog();
 			const participantDescriptions = formatParticipantDescriptions();
+
+			console.log('Generating next conversation.');
 
 			const response = await fetch('/api/multiplayer', {
 				method: 'POST',
@@ -98,6 +159,10 @@
 			// Check if nextUser is one of our AI participants
 			const aiParticipant = participants.find((p) => p.isBot && p.username === result.nextUser);
 
+			if (!aiParticipant) {
+				console.log('Waiting for the user.');
+			}
+
 			if (aiParticipant && result.message) {
 				const newMessage: ChatMessage = {
 					id: Date.now().toString(),
@@ -106,6 +171,11 @@
 					timestamp: new Date()
 				};
 				messages = [...messages, newMessage];
+
+				// Wait 1 second then try to generate the next message
+				setTimeout(async () => {
+					await getAIResponse();
+				}, 1000);
 			}
 		} catch (error) {
 			console.error('Error getting AI response:', error);
@@ -116,10 +186,19 @@
 
 	async function sendMessage() {
 		if (currentMessage.trim()) {
+			const messageText = currentMessage.trim();
+
+			// Check if it's an invite command
+			if (handleInviteCommand(messageText)) {
+				currentMessage = '';
+				setTimeout(() => inputElement?.focus(), 0);
+				return;
+			}
+
 			const newMessage: ChatMessage = {
 				id: Date.now().toString(),
 				username: currentUser,
-				message: currentMessage.trim(),
+				message: messageText,
 				timestamp: new Date()
 			};
 			messages = [...messages, newMessage];
@@ -194,7 +273,7 @@
 			type="text"
 			bind:value={currentMessage}
 			on:keydown={handleKeydown}
-			placeholder="Type your message and press Enter... (or press Enter on empty message for AI)"
+			placeholder="Type your message and press Enter... (use /invite <name> <personality> to add bots)"
 			class="flex-1 rounded border border-gray-600 bg-gray-700 px-2 py-1 font-mono text-xs text-white focus:border-blue-500 focus:outline-none"
 		/>
 	</div>
