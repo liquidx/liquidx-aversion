@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+This is a Svelte 5 project with Tailwind CSS v4.
+
 ## Development Commands
 
 - `npm run dev` - Start development server

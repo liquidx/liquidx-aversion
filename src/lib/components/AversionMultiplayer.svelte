@@ -321,7 +321,7 @@ Return the name of who would be most likely to say the next thing and the text o
 
 	function savePersonality() {
 		if (editingParticipant) {
-			const index = participants.findIndex(p => p.id === editingParticipant.id);
+			const index = participants.findIndex(p => p.id === editingParticipant!.id);
 			if (index !== -1) {
 				participants[index].personality = tempPersonality;
 				participants = [...participants]; // Trigger reactivity

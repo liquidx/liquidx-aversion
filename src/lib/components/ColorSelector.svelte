@@ -59,17 +59,21 @@
 			showDropdown = false;
 		}
 	}
+
+	// Generate unique ID for accessibility
+	const colorSelectorId = `color-selector-${Math.random().toString(36).substr(2, 9)}`;
 </script>
 
 <svelte:window onclick={handleClickOutside} />
 
 <div class="color-selector relative flex items-center gap-2">
 	{#if label}
-		<label class="text-xs font-medium text-white">{label}</label>
+		<label for={colorSelectorId} class="text-xs font-medium text-white">{label}</label>
 	{/if}
 
 	<button
 		type="button"
+		id={colorSelectorId}
 		onclick={toggleDropdown}
 		aria-label="Select color"
 		class="flex h-10 w-12 items-center justify-center rounded-md border border-slate-600 bg-slate-700 transition-colors hover:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"

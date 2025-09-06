@@ -109,7 +109,7 @@
 </script>
 
 <div class="terminal-bg">
-	<canvas bind:this={canvas} />
+	<canvas bind:this={canvas}></canvas>
 </div>
 
 <style>
