@@ -9,15 +9,15 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const { chatDialog, participants } = body;
+		const { chatDialog, participants, instructions } = body;
 
 		if (!chatDialog) {
 			return json({ error: 'Chat dialog is required' }, { status: 400 });
 		}
 
-		// Construct the prompt.
-		const prompt = `
-Consider the list of participants and	the following chat dialog and decide who will be the next person to respond. 
+		// Use provided instructions or fall back to default
+		const defaultInstructions = `
+Consider the list of participants and the following chat dialog and decide who will be the next person to respond. 
 Some of the participants are bots (represented as Bots), and some are humans. In the participants, they have a personality.
 Return the name of who would be most likely to say the next thing and the text of the possible response.
 
@@ -27,7 +27,10 @@ Return the name of who would be most likely to say the next thing and the text o
 
 # Message rules
 - The message should be in the style of what the participant's personality specified in the participant list.
-- The message should not have a question in it or solicit a response.
+- The message should not have a question in it or solicit a response.`;
+
+		// Construct the prompt.
+		const prompt = `${instructions || defaultInstructions}
 
 ${
 	participants
@@ -43,7 +46,6 @@ ${participants}
 Return your response as a JSON object with exactly these two keys:
 - "nextUser": the username of who should respond next
 - "message": the text of their response
-- "targetedUser": the username of who the message is for. empty if there is not target.
 
 Chat dialog:
 ${chatDialog}`;
