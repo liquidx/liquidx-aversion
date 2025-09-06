@@ -11,18 +11,13 @@ export async function generateText(
 	prompt: string,
 	options: GenerateTextOptions = {}
 ): Promise<string> {
-	const {
-		model = 'gemini-2.5-flash-lite-preview-06-17',
-		temperature = 0.1,
-		maxTokens = 10000
-	} = options;
+	const { model = 'gemini-2.5-flash-lite', temperature = 0.1 } = options;
 
 	try {
 		const generativeModel = genAI.getGenerativeModel({
 			model,
 			generationConfig: {
-				temperature,
-				maxOutputTokens: maxTokens
+				temperature
 			}
 		});
 

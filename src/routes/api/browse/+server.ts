@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		Generate CSS that corresponds to the era that this website would be relevant.
 		`;
 		const options = {
-			model: 'gemini-2.5-flash-lite',
+			model: 'gemini-2.5-flash-lite', // gemini-2.5-flash is too slow
 			temperature: 0.8
 		};
 		const result = await generateText(genAI, prompt, options);
