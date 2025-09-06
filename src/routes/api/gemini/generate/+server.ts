@@ -18,7 +18,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 
 		const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 		const modelRequest = {
-			model: 'gemini-2.5-flash-lite-preview-06-17',
+			model: 'gemini-2.5-flash-lite',
 			contents: prompt,
 			generationConfig: {
 				temperature: 0.7,
