@@ -28,7 +28,7 @@
   // Background removal settings
   let bgRemovalMode = $state<'color' | 'corners'>('corners');
   let bgColor = $state('#ffffff');
-  let bgTolerance = $state(30);
+  let bgTolerance = $state(10);
 
   // Scale settings
   let scaleMode = $state<'percentage' | 'dimensions' | 'physical'>('physical');
