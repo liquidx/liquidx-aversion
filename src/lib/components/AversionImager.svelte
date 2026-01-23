@@ -31,7 +31,7 @@
   let bgTolerance = $state(30);
 
   // Scale settings
-  let scaleMode = $state<'percentage' | 'dimensions' | 'physical'>('percentage');
+  let scaleMode = $state<'percentage' | 'dimensions' | 'physical'>('physical');
   let scalePercentage = $state(100);
   let targetWidth = $state(0);
   let targetHeight = $state(0);
@@ -42,6 +42,9 @@
   // Pad settings
   let padWidth = $state(400);
   let padHeight = $state(1600);
+
+  // Everything tool settings
+  let everythingHeightCm = $state(10);
 
   // History for undo
   let history: ImageData[] = $state([]);
@@ -104,7 +107,7 @@
 
         // Set imageLoaded to show the preview canvas, then wait for DOM update
         imageLoaded = true;
-        statusMessage = `Loaded: ${img.width} × ${img.height} pixels`;
+        statusMessage = '';
 
         // Wait for DOM to update so previewCanvas exists
         await tick();
@@ -421,6 +424,160 @@
     });
   }
 
+  // Everything - apply all tools in sequence
+  function applyEverything() {
+    if (!imageState.processed) return;
+
+    isProcessing = true;
+    statusMessage = 'Applying all tools...';
+
+    requestAnimationFrame(() => {
+      let currentData = cloneImageData(imageState.processed!);
+
+      // 1. Remove background (using corners detection)
+      statusMessage = 'Removing background...';
+      const bgData = currentData.data;
+      const corners = [
+        0,
+        (currentData.width - 1) * 4,
+        (currentData.height - 1) * currentData.width * 4,
+        ((currentData.height - 1) * currentData.width + currentData.width - 1) * 4
+      ];
+      let rSum = 0, gSum = 0, bSum = 0;
+      for (const idx of corners) {
+        rSum += bgData[idx];
+        gSum += bgData[idx + 1];
+        bSum += bgData[idx + 2];
+      }
+      const targetR = Math.round(rSum / 4);
+      const targetG = Math.round(gSum / 4);
+      const targetB = Math.round(bSum / 4);
+
+      for (let i = 0; i < bgData.length; i += 4) {
+        const diff = Math.sqrt(
+          Math.pow(bgData[i] - targetR, 2) +
+          Math.pow(bgData[i + 1] - targetG, 2) +
+          Math.pow(bgData[i + 2] - targetB, 2)
+        );
+        if (diff <= bgTolerance) {
+          bgData[i + 3] = 0;
+        }
+      }
+
+      // 2. Auto trim
+      statusMessage = 'Trimming...';
+      const trimData = currentData.data;
+      const trimWidth = currentData.width;
+      const trimHeight = currentData.height;
+      let minX = trimWidth, minY = trimHeight, maxX = 0, maxY = 0;
+
+      for (let y = 0; y < trimHeight; y++) {
+        for (let x = 0; x < trimWidth; x++) {
+          const idx = (y * trimWidth + x) * 4;
+          if (trimData[idx + 3] > 0) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+      }
+
+      if (minX >= maxX || minY >= maxY) {
+        isProcessing = false;
+        statusMessage = 'No visible pixels found after background removal';
+        return;
+      }
+
+      const newTrimWidth = maxX - minX + 1;
+      const newTrimHeight = maxY - minY + 1;
+      const trimmed = new ImageData(newTrimWidth, newTrimHeight);
+      const trimmedData = trimmed.data;
+
+      for (let y = 0; y < newTrimHeight; y++) {
+        for (let x = 0; x < newTrimWidth; x++) {
+          const srcIdx = ((y + minY) * trimWidth + (x + minX)) * 4;
+          const dstIdx = (y * newTrimWidth + x) * 4;
+          trimmedData[dstIdx] = trimData[srcIdx];
+          trimmedData[dstIdx + 1] = trimData[srcIdx + 1];
+          trimmedData[dstIdx + 2] = trimData[srcIdx + 2];
+          trimmedData[dstIdx + 3] = trimData[srcIdx + 3];
+        }
+      }
+      currentData = trimmed;
+
+      // 3. Scale (physical mode)
+      statusMessage = 'Scaling...';
+      const scaleTargetHeight = Math.round(everythingHeightCm * pixelsPerCm);
+      const scaleRatio = currentData.width / currentData.height;
+      const scaleTargetWidth = Math.round(scaleTargetHeight * scaleRatio);
+
+      const scaleTempCanvas = document.createElement('canvas');
+      scaleTempCanvas.width = currentData.width;
+      scaleTempCanvas.height = currentData.height;
+      const scaleTempCtx = scaleTempCanvas.getContext('2d')!;
+      scaleTempCtx.putImageData(currentData, 0, 0);
+
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = scaleTargetWidth;
+      scaledCanvas.height = scaleTargetHeight;
+      const scaledCtx = scaledCanvas.getContext('2d')!;
+      scaledCtx.imageSmoothingEnabled = true;
+      scaledCtx.imageSmoothingQuality = 'high';
+      scaledCtx.drawImage(scaleTempCanvas, 0, 0, scaleTargetWidth, scaleTargetHeight);
+      currentData = scaledCtx.getImageData(0, 0, scaleTargetWidth, scaleTargetHeight);
+
+      // 4. Pad image
+      statusMessage = 'Padding...';
+      const padSrcWidth = currentData.width;
+      const padSrcHeight = currentData.height;
+
+      if (padSrcWidth > padWidth || padSrcHeight > padHeight) {
+        isProcessing = false;
+        statusMessage = `Scaled image (${padSrcWidth}×${padSrcHeight}) is larger than container (${padWidth}×${padHeight})`;
+        return;
+      }
+
+      const padCanvas = document.createElement('canvas');
+      padCanvas.width = padWidth;
+      padCanvas.height = padHeight;
+      const padCtx = padCanvas.getContext('2d')!;
+      padCtx.clearRect(0, 0, padWidth, padHeight);
+
+      const padSrcCanvas = document.createElement('canvas');
+      padSrcCanvas.width = padSrcWidth;
+      padSrcCanvas.height = padSrcHeight;
+      const padSrcCtx = padSrcCanvas.getContext('2d')!;
+      padSrcCtx.putImageData(currentData, 0, 0);
+
+      const padX = Math.round((padWidth - padSrcWidth) / 2);
+      const padY = padHeight - padSrcHeight;
+      padCtx.drawImage(padSrcCanvas, padX, padY);
+
+      const finalData = padCtx.getImageData(0, 0, padWidth, padHeight);
+
+      // Apply final result
+      applyImageData(finalData);
+      pushToHistory(finalData);
+
+      // Save the image
+      statusMessage = 'Saving...';
+      const saveCanvas = document.createElement('canvas');
+      saveCanvas.width = finalData.width;
+      saveCanvas.height = finalData.height;
+      const saveCtx = saveCanvas.getContext('2d')!;
+      saveCtx.putImageData(finalData, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `${originalFilename || 'image'}.png`;
+      link.href = saveCanvas.toDataURL('image/png');
+      link.click();
+
+      isProcessing = false;
+      statusMessage = `Done! Saved ${padWidth}×${padHeight} image`;
+    });
+  }
+
   // Save
   function saveImage() {
     if (!imageState.processed) return;
@@ -443,7 +600,11 @@
   <div class="max-w-6xl mx-auto">
     <header class="mb-8">
       <h1 class="text-3xl font-bold text-white mb-2">Imager</h1>
-      <p class="text-gray-400">Image manipulation tool for background removal, trimming, and scaling</p>
+      {#if imageLoaded && originalFilename}
+        <p class="text-gray-300 font-mono">{originalFilename}.png</p>
+      {:else}
+        <p class="text-gray-400">Image manipulation tool for background removal, trimming, and scaling</p>
+      {/if}
     </header>
 
     {#if !imageLoaded}
@@ -527,6 +688,32 @@
           <!-- Tools -->
           <div class="bg-gray-800 rounded-lg p-4 space-y-4">
             <h3 class="text-sm font-medium text-gray-400">Tools</h3>
+
+            <!-- Everything -->
+            <div class="border-t border-gray-700 pt-4">
+              <h4 class="font-medium mb-3">Everything</h4>
+              <div class="space-y-3">
+                <p class="text-xs text-gray-400">Apply all tools in sequence: remove background, trim, scale, pad, then save.</p>
+                <div>
+                  <label for="everything-height" class="block text-xs text-gray-400 mb-1">Height: {everythingHeightCm} cm ({everythingHeightCm * pixelsPerCm} px)</label>
+                  <input
+                    id="everything-height"
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    class="w-full bg-gray-700 rounded px-3 py-1.5 text-sm"
+                    bind:value={everythingHeightCm}
+                  />
+                </div>
+                <button
+                  class="w-full py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
+                  onclick={applyEverything}
+                  disabled={isProcessing}
+                >
+                  Apply Everything & Save
+                </button>
+              </div>
+            </div>
 
             <!-- Remove Background -->
             <div class="border-t border-gray-700 pt-4">
@@ -642,16 +829,6 @@
                       class="w-full bg-gray-700 rounded px-3 py-1.5 text-sm"
                       bind:value={physicalHeightCm}
                     />
-                    <div class="flex flex-wrap gap-1 mt-2">
-                      {#each [5, 10, 15, 20, 25, 30] as preset}
-                        <button
-                          class="px-2 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded"
-                          onclick={() => physicalHeightCm = preset}
-                        >
-                          {preset}cm
-                        </button>
-                      {/each}
-                    </div>
                   </div>
                 {:else}
                   <div>
