@@ -607,36 +607,17 @@
       {/if}
     </header>
 
-    {#if !imageLoaded}
-      <!-- Upload Area -->
-      <div
-        class="border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer {isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-gray-500'}"
-        role="button"
-        tabindex="0"
-        ondragover={handleDragOver}
-        ondragleave={handleDragLeave}
-        ondrop={handleDrop}
-        onclick={() => fileInput.click()}
-        onkeydown={(e) => e.key === 'Enter' && fileInput.click()}
-      >
-        <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <p class="text-lg text-gray-300 mb-2">Drop an image here or click to select</p>
-        <p class="text-sm text-gray-500">Supports PNG, JPG, GIF, WebP</p>
-      </div>
-      <input
-        bind:this={fileInput}
-        type="file"
-        accept="image/*"
-        class="hidden"
-        onchange={handleFileSelect}
-      />
-    {:else}
-      <!-- Main Editor -->
+    <!-- Main Editor -->
+    <input
+      bind:this={fileInput}
+      type="file"
+      accept="image/*"
+      class="hidden"
+      onchange={handleFileSelect}
+    />
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Tools Panel -->
-        <div class="lg:col-span-1 space-y-4">
+        <div class="lg:col-span-1 space-y-4 order-2 lg:order-1">
           <!-- Status -->
           {#if statusMessage}
             <div class="bg-gray-800 rounded-lg p-3 text-sm text-gray-300">
@@ -650,37 +631,37 @@
             <div class="flex flex-wrap gap-2">
               <button
                 class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                onclick={() => fileInput.click()}
+              >
+                Load Image
+              </button>
+              <button
+                class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
                 onclick={undo}
-                disabled={historyIndex <= 0 || isProcessing}
+                disabled={!imageLoaded || historyIndex <= 0 || isProcessing}
               >
                 Undo
               </button>
               <button
                 class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
                 onclick={redo}
-                disabled={historyIndex >= history.length - 1 || isProcessing}
+                disabled={!imageLoaded || historyIndex >= history.length - 1 || isProcessing}
               >
                 Redo
               </button>
               <button
                 class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
                 onclick={resetToOriginal}
-                disabled={isProcessing}
+                disabled={!imageLoaded || isProcessing}
               >
                 Reset
               </button>
               <button
                 class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 rounded transition-colors disabled:opacity-50"
                 onclick={saveImage}
-                disabled={isProcessing}
+                disabled={!imageLoaded || isProcessing}
               >
                 Save PNG
-              </button>
-              <button
-                class="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-                onclick={() => { imageLoaded = false; statusMessage = ''; }}
-              >
-                New Image
               </button>
             </div>
           </div>
@@ -708,7 +689,7 @@
                 <button
                   class="w-full py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
                   onclick={applyEverything}
-                  disabled={isProcessing}
+                  disabled={!imageLoaded || isProcessing}
                 >
                   Apply Everything & Save
                 </button>
@@ -759,7 +740,7 @@
                 <button
                   class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
                   onclick={removeBackground}
-                  disabled={isProcessing}
+                  disabled={!imageLoaded || isProcessing}
                 >
                   Remove Background
                 </button>
@@ -773,7 +754,7 @@
               <button
                 class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
                 onclick={autoTrim}
-                disabled={isProcessing}
+                disabled={!imageLoaded || isProcessing}
               >
                 Trim Image
               </button>
@@ -865,7 +846,7 @@
                 <button
                   class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
                   onclick={applyScale}
-                  disabled={isProcessing}
+                  disabled={!imageLoaded || isProcessing}
                 >
                   Apply Scale
                 </button>
@@ -902,7 +883,7 @@
                 <button
                   class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
                   onclick={padImage}
-                  disabled={isProcessing}
+                  disabled={!imageLoaded || isProcessing}
                 >
                   Pad Image
                 </button>
@@ -918,19 +899,41 @@
         </div>
 
         <!-- Preview Area -->
-        <div class="lg:col-span-2">
-          <div class="bg-gray-800 rounded-lg p-4">
+        <div class="lg:col-span-2 order-1 lg:order-2">
+          <div
+            class="bg-gray-800 rounded-lg p-4 transition-colors {isDragging ? 'ring-2 ring-blue-500' : ''}"
+            role="region"
+            aria-label="Image drop zone"
+            ondragover={handleDragOver}
+            ondragleave={handleDragLeave}
+            ondrop={handleDrop}
+          >
             <h3 class="text-sm font-medium text-gray-400 mb-3">Preview</h3>
-            <div class="relative overflow-auto max-h-[70vh] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMjIyIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzIyMiIvPjwvc3ZnPg==')] rounded">
-              <canvas
-                bind:this={previewCanvas}
-                class="max-w-full h-auto"
-              ></canvas>
+            <div
+              class="relative overflow-auto max-h-[70vh] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMjIyIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzIyMiIvPjwvc3ZnPg==')] rounded min-h-[300px] flex items-center justify-center"
+              role="button"
+              tabindex="0"
+              onclick={() => !imageLoaded && fileInput.click()}
+              onkeydown={(e) => e.key === 'Enter' && !imageLoaded && fileInput.click()}
+            >
+              {#if imageLoaded}
+                <canvas
+                  bind:this={previewCanvas}
+                  class="max-w-full h-auto"
+                ></canvas>
+              {:else}
+                <div class="text-center text-gray-500 p-8">
+                  <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-lg mb-2">Drop an image here</p>
+                  <p class="text-sm">or click to select</p>
+                </div>
+              {/if}
             </div>
           </div>
         </div>
       </div>
-    {/if}
 
     <!-- Hidden source canvas -->
     <canvas bind:this={sourceCanvas} class="hidden"></canvas>
