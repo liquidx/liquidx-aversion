@@ -6,7 +6,7 @@ import { postSimpleMessageToDiscord } from '$lib/discord.server';
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	try {
-		const { prompt } = await request.json();
+		const { prompt, model, generationConfig } = await request.json();
 
 		if (!prompt) {
 			return json({ error: 'Prompt is required' }, { status: 400 });
@@ -17,15 +17,23 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		}
 
 		const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+		// Use provided model or default to gemini-2.5-flash-lite
+		const modelName = model || 'gemini-2.5-flash-lite';
+
+		// Merge provided generationConfig with defaults
+		const defaultConfig = {
+			temperature: 0.7,
+			topK: 40,
+			topP: 0.95,
+			maxOutputTokens: 8192
+		};
+		const finalConfig = { ...defaultConfig, ...generationConfig };
+
 		const modelRequest = {
-			model: 'gemini-2.5-flash-lite',
+			model: modelName,
 			contents: prompt,
-			generationConfig: {
-				temperature: 0.7,
-				topK: 40,
-				topP: 0.95,
-				maxOutputTokens: 8192
-			}
+			generationConfig: finalConfig
 		};
 		const response = await ai.models.generateContent(modelRequest);
 
@@ -33,7 +41,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		if (response.text) {
 			const ip = getClientAddress();
 			const url = request.headers.get('referer') || 'no-referrer';
-			const message = `Gemini[${ip}] ${url}`;
+			const message = `Gemini[${modelName}][${ip}] ${url}`;
 			await postSimpleMessageToDiscord(message);
 		}
 

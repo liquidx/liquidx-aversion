@@ -7,11 +7,21 @@ export interface Demo {
 
 export const demos: Demo[] = [
 	{
+		title: 'mutant',
+		description: `A basic AI chat interface that evolves and mutates over time.
+
+			<p>Starting as a simple chat UI, this demo explores how an AI conversation interface
+			can transform and adapt based on user interactions.</p>
+`,
+		path: '/of/mutant',
+		yearMonth: '2025-10'
+	},
+	{
 		title: 'multiplayer',
-		description: `Exploration of multiplayer AI interaction using an LLM. 
-			
-			<p>Inspired by <a href="https://interconnected.org/home/2025/05/23/turntaking" class="underline">Matt Webb's Multiplayer AI posts</a>. 
-			Can an LLM figure out in a conversation with multiple bots and humans, 
+		description: `Exploration of multiplayer AI interaction using an LLM.
+
+			<p>Inspired by <a href="https://interconnected.org/home/2025/05/23/turntaking" class="underline">Matt Webb's Multiplayer AI posts</a>.
+			Can an LLM figure out in a conversation with multiple bots and humans,
 			when to respond and when to let the others speak.</p>
 `,
 		path: '/of/multiplayer',
