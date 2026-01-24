@@ -46,6 +46,12 @@
   // Everything tool settings
   let everythingHeightCm = $state(10);
 
+  // Crop tool settings
+  let cropMode = $state(false);
+  let cropStart = $state<{ x: number; y: number } | null>(null);
+  let cropEnd = $state<{ x: number; y: number } | null>(null);
+  let isDraggingCrop = $state(false);
+
   // History for undo
   let history: ImageData[] = $state([]);
   let historyIndex = $state(-1);
@@ -424,6 +430,89 @@
     });
   }
 
+  // Crop tool functions
+  function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
+    const canvas = previewCanvas;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: Math.round((e.clientX - rect.left) * scaleX),
+      y: Math.round((e.clientY - rect.top) * scaleY)
+    };
+  }
+
+  function handleCropMouseDown(e: MouseEvent) {
+    if (!cropMode || !imageLoaded) return;
+    const coords = getCanvasCoordinates(e);
+    cropStart = coords;
+    cropEnd = coords;
+    isDraggingCrop = true;
+  }
+
+  function handleCropMouseMove(e: MouseEvent) {
+    if (!isDraggingCrop || !cropMode) return;
+    cropEnd = getCanvasCoordinates(e);
+  }
+
+  function handleCropMouseUp() {
+    if (isDraggingCrop) {
+      isDraggingCrop = false;
+    }
+  }
+
+  function clearCropSelection() {
+    cropStart = null;
+    cropEnd = null;
+  }
+
+  function applyCrop() {
+    if (!imageState.processed || !cropStart || !cropEnd) return;
+
+    // Normalize coordinates (handle selection in any direction)
+    const x1 = Math.max(0, Math.min(cropStart.x, cropEnd.x));
+    const y1 = Math.max(0, Math.min(cropStart.y, cropEnd.y));
+    const x2 = Math.min(imageState.processed.width, Math.max(cropStart.x, cropEnd.x));
+    const y2 = Math.min(imageState.processed.height, Math.max(cropStart.y, cropEnd.y));
+
+    const newWidth = x2 - x1;
+    const newHeight = y2 - y1;
+
+    if (newWidth < 1 || newHeight < 1) {
+      statusMessage = 'Selection too small';
+      return;
+    }
+
+    isProcessing = true;
+    statusMessage = 'Cropping...';
+
+    requestAnimationFrame(() => {
+      const src = imageState.processed!;
+      const cropped = new ImageData(newWidth, newHeight);
+      const srcData = src.data;
+      const dstData = cropped.data;
+
+      for (let y = 0; y < newHeight; y++) {
+        for (let x = 0; x < newWidth; x++) {
+          const srcIdx = ((y + y1) * src.width + (x + x1)) * 4;
+          const dstIdx = (y * newWidth + x) * 4;
+          dstData[dstIdx] = srcData[srcIdx];
+          dstData[dstIdx + 1] = srcData[srcIdx + 1];
+          dstData[dstIdx + 2] = srcData[srcIdx + 2];
+          dstData[dstIdx + 3] = srcData[srcIdx + 3];
+        }
+      }
+
+      applyImageData(cropped);
+      pushToHistory(cropped);
+
+      cropMode = false;
+      clearCropSelection();
+      isProcessing = false;
+      statusMessage = `Cropped to ${newWidth} × ${newHeight} pixels`;
+    });
+  }
+
   // Everything - apply all tools in sequence
   function applyEverything() {
     if (!imageState.processed) return;
@@ -696,6 +785,44 @@
               </div>
             </div>
 
+            <!-- Crop -->
+            <div class="border-t border-gray-700 pt-4">
+              <h4 class="font-medium mb-3">Crop</h4>
+              <div class="space-y-3">
+                <p class="text-xs text-gray-400">Select a rectangular area on the preview to crop.</p>
+                {#if cropMode}
+                  <div class="flex gap-2">
+                    <button
+                      class="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
+                      onclick={applyCrop}
+                      disabled={!cropStart || !cropEnd || isProcessing}
+                    >
+                      Apply Crop
+                    </button>
+                    <button
+                      class="flex-1 py-1.5 bg-gray-600 hover:bg-gray-500 rounded text-sm font-medium transition-colors"
+                      onclick={() => { cropMode = false; clearCropSelection(); }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {#if cropStart && cropEnd}
+                    <p class="text-xs text-gray-400">
+                      Selection: {Math.abs(cropEnd.x - cropStart.x)} × {Math.abs(cropEnd.y - cropStart.y)} px
+                    </p>
+                  {/if}
+                {:else}
+                  <button
+                    class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors disabled:opacity-50"
+                    onclick={() => { cropMode = true; clearCropSelection(); }}
+                    disabled={!imageLoaded || isProcessing}
+                  >
+                    Start Selection
+                  </button>
+                {/if}
+              </div>
+            </div>
+
             <!-- Remove Background -->
             <div class="border-t border-gray-700 pt-4">
               <h4 class="font-medium mb-3">Remove Background</h4>
@@ -910,17 +1037,41 @@
           >
             <h3 class="text-sm font-medium text-gray-400 mb-3">Preview</h3>
             <div
-              class="relative overflow-auto max-h-[70vh] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMjIyIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzIyMiIvPjwvc3ZnPg==')] rounded min-h-[300px] flex items-center justify-center"
+              class="relative bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMjIyIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzIyMiIvPjwvc3ZnPg==')] rounded {imageLoaded ? '' : 'min-h-[300px] flex items-center justify-center'}"
               role="button"
               tabindex="0"
               onclick={() => !imageLoaded && fileInput.click()}
               onkeydown={(e) => e.key === 'Enter' && !imageLoaded && fileInput.click()}
             >
               {#if imageLoaded}
-                <canvas
-                  bind:this={previewCanvas}
-                  class="max-w-full h-auto"
-                ></canvas>
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <div
+                  class="relative inline-block {cropMode ? 'cursor-crosshair' : ''}"
+                  onmousedown={handleCropMouseDown}
+                  onmousemove={handleCropMouseMove}
+                  onmouseup={handleCropMouseUp}
+                  onmouseleave={handleCropMouseUp}
+                  role="application"
+                  aria-label="Image preview with crop selection"
+                >
+                  <canvas
+                    bind:this={previewCanvas}
+                    class="max-w-full h-auto block"
+                  ></canvas>
+                  {#if cropMode && cropStart && cropEnd && previewCanvas}
+                    {@const rect = previewCanvas.getBoundingClientRect()}
+                    {@const scaleX = rect.width / previewCanvas.width}
+                    {@const scaleY = rect.height / previewCanvas.height}
+                    {@const left = Math.min(cropStart.x, cropEnd.x) * scaleX}
+                    {@const top = Math.min(cropStart.y, cropEnd.y) * scaleY}
+                    {@const width = Math.abs(cropEnd.x - cropStart.x) * scaleX}
+                    {@const height = Math.abs(cropEnd.y - cropStart.y) * scaleY}
+                    <div
+                      class="absolute border-2 border-blue-500 bg-blue-500/20 pointer-events-none"
+                      style="left: {left}px; top: {top}px; width: {width}px; height: {height}px;"
+                    ></div>
+                  {/if}
+                </div>
               {:else}
                 <div class="text-center text-gray-500 p-8">
                   <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
