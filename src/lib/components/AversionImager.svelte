@@ -919,7 +919,7 @@
 
 						<!-- Scale -->
 						<div class="w-32 flex-shrink-0 lg:w-auto">
-							<div class="flex flex-col space-y-3 lg:flex-col-reverse">
+							<div class="flex flex-col lg:flex-col-reverse">
 								<button
 									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
 									onclick={applyScale}
@@ -927,101 +927,107 @@
 								>
 									Apply Scale
 								</button>
-								<div>
-									<label for="scale-mode" class="mb-1 block text-xs text-gray-400">Mode</label>
-									<select
-										id="scale-mode"
-										class="w-full rounded bg-gray-700 px-2 py-1 text-xs"
-										bind:value={scaleMode}
-									>
-										<option value="percentage">Percentage</option>
-										<option value="dimensions">Dimensions (px)</option>
-										<option value="physical">Physical (cm)</option>
-									</select>
+								<div class="controls py-3">
+									<div>
+										<label for="scale-mode" class="mb-1 block text-xs text-gray-400">Mode</label>
+										<select
+											id="scale-mode"
+											class="w-full rounded bg-gray-700 px-2 py-1 text-xs"
+											bind:value={scaleMode}
+										>
+											<option value="percentage">Percentage</option>
+											<option value="dimensions">Dimensions (px)</option>
+											<option value="physical">Physical (cm)</option>
+										</select>
+									</div>
+									{#if scaleMode === 'percentage'}
+										<div>
+											<label for="scale-percentage" class="mb-1 block text-xs text-gray-400"
+												>Scale: {scalePercentage}%</label
+											>
+											<input
+												id="scale-percentage"
+												type="range"
+												min="1"
+												max="400"
+												class="w-full"
+												bind:value={scalePercentage}
+											/>
+											<div class="mt-2 flex flex-wrap gap-1">
+												{#each [25, 50, 75, 100, 150, 200] as preset}
+													<button
+														class="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600"
+														onclick={() => (scalePercentage = preset)}
+													>
+														{preset}%
+													</button>
+												{/each}
+											</div>
+										</div>
+									{:else if scaleMode === 'physical'}
+										<div>
+											<p class="mb-2 text-xs text-gray-400">1 cm = {pixelsPerCm} px</p>
+											<label for="physical-height" class="mb-1 block text-xs text-gray-400"
+												>Height: {physicalHeightCm} cm ({physicalHeightCm * pixelsPerCm} px)</label
+											>
+											<input
+												id="physical-height"
+												type="number"
+												min="1"
+												step="0.5"
+												class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+												bind:value={physicalHeightCm}
+											/>
+										</div>
+									{:else}
+										<div>
+											<label class="mb-2 flex items-center gap-2 text-xs text-gray-400">
+												<input type="checkbox" bind:checked={maintainAspectRatio} />
+												Maintain aspect ratio
+											</label>
+											<div class="grid grid-cols-2 gap-2">
+												<div>
+													<label for="target-width" class="mb-1 block text-xs text-gray-400"
+														>Width</label
+													>
+													<input
+														id="target-width"
+														type="number"
+														min="1"
+														class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+														value={targetWidth}
+														oninput={(e) =>
+															updateTargetWidth(
+																parseInt((e.target as HTMLInputElement).value) || 1
+															)}
+													/>
+												</div>
+												<div>
+													<label for="target-height" class="mb-1 block text-xs text-gray-400"
+														>Height</label
+													>
+													<input
+														id="target-height"
+														type="number"
+														min="1"
+														class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+														value={targetHeight}
+														oninput={(e) =>
+															updateTargetHeight(
+																parseInt((e.target as HTMLInputElement).value) || 1
+															)}
+													/>
+												</div>
+											</div>
+										</div>
+									{/if}
 								</div>
-								{#if scaleMode === 'percentage'}
-									<div>
-										<label for="scale-percentage" class="mb-1 block text-xs text-gray-400"
-											>Scale: {scalePercentage}%</label
-										>
-										<input
-											id="scale-percentage"
-											type="range"
-											min="1"
-											max="400"
-											class="w-full"
-											bind:value={scalePercentage}
-										/>
-										<div class="mt-2 flex flex-wrap gap-1">
-											{#each [25, 50, 75, 100, 150, 200] as preset}
-												<button
-													class="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600"
-													onclick={() => (scalePercentage = preset)}
-												>
-													{preset}%
-												</button>
-											{/each}
-										</div>
-									</div>
-								{:else if scaleMode === 'physical'}
-									<div>
-										<p class="mb-2 text-xs text-gray-400">1 cm = {pixelsPerCm} px</p>
-										<label for="physical-height" class="mb-1 block text-xs text-gray-400"
-											>Height: {physicalHeightCm} cm ({physicalHeightCm * pixelsPerCm} px)</label
-										>
-										<input
-											id="physical-height"
-											type="number"
-											min="1"
-											step="0.5"
-											class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
-											bind:value={physicalHeightCm}
-										/>
-									</div>
-								{:else}
-									<div>
-										<label class="mb-2 flex items-center gap-2 text-xs text-gray-400">
-											<input type="checkbox" bind:checked={maintainAspectRatio} />
-											Maintain aspect ratio
-										</label>
-										<div class="grid grid-cols-2 gap-2">
-											<div>
-												<label for="target-width" class="mb-1 block text-xs text-gray-400"
-													>Width</label
-												>
-												<input
-													id="target-width"
-													type="number"
-													min="1"
-													class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
-													value={targetWidth}
-													oninput={(e) =>
-														updateTargetWidth(parseInt((e.target as HTMLInputElement).value) || 1)}
-												/>
-											</div>
-											<div>
-												<label for="target-height" class="mb-1 block text-xs text-gray-400"
-													>Height</label
-												>
-												<input
-													id="target-height"
-													type="number"
-													min="1"
-													class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
-													value={targetHeight}
-													oninput={(e) =>
-														updateTargetHeight(parseInt((e.target as HTMLInputElement).value) || 1)}
-												/>
-											</div>
-										</div>
-									</div>
-								{/if}
 							</div>
 						</div>
 
 						<!-- Pad Image -->
 						<div class="w-32 flex-shrink-0 lg:w-auto">
-							<div class="flex flex-col space-y-3 lg:flex-col-reverse">
+							<div class="flex flex-col lg:flex-col-reverse">
 								<button
 									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
 									onclick={padImage}
@@ -1030,7 +1036,6 @@
 									Pad Image
 								</button>
 								<div class="py-3">
-									<p class="text-xs text-gray-400">Center horizontally, align to bottom.</p>
 									<div class="grid grid-cols-2 gap-2">
 										<div>
 											<label for="pad-width" class="mb-1 block text-xs text-gray-400">Width</label>
