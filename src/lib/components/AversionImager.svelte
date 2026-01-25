@@ -432,9 +432,12 @@
 		const rect = canvas.getBoundingClientRect();
 		const scaleX = canvas.width / rect.width;
 		const scaleY = canvas.height / rect.height;
+		// Calculate coordinates and clamp to image bounds
+		const x = Math.round((e.clientX - rect.left) * scaleX);
+		const y = Math.round((e.clientY - rect.top) * scaleY);
 		return {
-			x: Math.round((e.clientX - rect.left) * scaleX),
-			y: Math.round((e.clientY - rect.top) * scaleY)
+			x: Math.max(0, Math.min(canvas.width, x)),
+			y: Math.max(0, Math.min(canvas.height, y))
 		};
 	}
 
@@ -444,6 +447,9 @@
 		cropStart = coords;
 		cropEnd = coords;
 		isDraggingCrop = true;
+		// Add document-level listeners to track mouse outside the element
+		document.addEventListener('mousemove', handleDocumentMouseMove);
+		document.addEventListener('mouseup', handleDocumentMouseUp);
 	}
 
 	function handleCropMouseMove(e: MouseEvent) {
@@ -451,10 +457,18 @@
 		cropEnd = getCanvasCoordinates(e);
 	}
 
-	function handleCropMouseUp() {
+	function handleDocumentMouseMove(e: MouseEvent) {
+		if (!isDraggingCrop || !cropMode) return;
+		cropEnd = getCanvasCoordinates(e);
+	}
+
+	function handleDocumentMouseUp() {
 		if (isDraggingCrop) {
 			isDraggingCrop = false;
 		}
+		// Clean up document listeners
+		document.removeEventListener('mousemove', handleDocumentMouseMove);
+		document.removeEventListener('mouseup', handleDocumentMouseUp);
 	}
 
 	function clearCropSelection() {
@@ -840,7 +854,7 @@
 
 						<!-- Remove Background -->
 						<div class="w-32 flex-shrink-0 lg:w-auto">
-							<div class="space-y-3">
+							<div class="flex flex-col space-y-3 lg:flex-col-reverse">
 								<button
 									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
 									onclick={removeBackground}
@@ -905,7 +919,7 @@
 
 						<!-- Scale -->
 						<div class="w-32 flex-shrink-0 lg:w-auto">
-							<div class="space-y-3">
+							<div class="flex flex-col space-y-3 lg:flex-col-reverse">
 								<button
 									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
 									onclick={applyScale}
@@ -1007,35 +1021,38 @@
 
 						<!-- Pad Image -->
 						<div class="w-32 flex-shrink-0 lg:w-auto">
-							<button
-								class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
-								onclick={padImage}
-								disabled={!imageLoaded || isProcessing}
-							>
-								Pad Image
-							</button>
-							<div class="space-y-3">
-								<p class="text-xs text-gray-400">Center horizontally, align to bottom.</p>
-								<div class="grid grid-cols-2 gap-2">
-									<div>
-										<label for="pad-width" class="mb-1 block text-xs text-gray-400">Width</label>
-										<input
-											id="pad-width"
-											type="number"
-											min="1"
-											class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
-											bind:value={padWidth}
-										/>
-									</div>
-									<div>
-										<label for="pad-height" class="mb-1 block text-xs text-gray-400">Height</label>
-										<input
-											id="pad-height"
-											type="number"
-											min="1"
-											class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
-											bind:value={padHeight}
-										/>
+							<div class="flex flex-col space-y-3 lg:flex-col-reverse">
+								<button
+									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+									onclick={padImage}
+									disabled={!imageLoaded || isProcessing}
+								>
+									Pad Image
+								</button>
+								<div class="py-3">
+									<p class="text-xs text-gray-400">Center horizontally, align to bottom.</p>
+									<div class="grid grid-cols-2 gap-2">
+										<div>
+											<label for="pad-width" class="mb-1 block text-xs text-gray-400">Width</label>
+											<input
+												id="pad-width"
+												type="number"
+												min="1"
+												class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+												bind:value={padWidth}
+											/>
+										</div>
+										<div>
+											<label for="pad-height" class="mb-1 block text-xs text-gray-400">Height</label
+											>
+											<input
+												id="pad-height"
+												type="number"
+												min="1"
+												class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+												bind:value={padHeight}
+											/>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1078,8 +1095,6 @@
 								class="relative inline-block {cropMode ? 'cursor-crosshair' : ''}"
 								onmousedown={handleCropMouseDown}
 								onmousemove={handleCropMouseMove}
-								onmouseup={handleCropMouseUp}
-								onmouseleave={handleCropMouseUp}
 								role="application"
 								aria-label="Image preview with crop selection"
 							>
