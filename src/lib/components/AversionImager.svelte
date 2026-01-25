@@ -26,7 +26,7 @@
 	});
 
 	// Background removal settings
-	let bgRemovalMode = $state<'color' | 'corners'>('corners');
+	let bgRemovalMode = $state<'color' | 'corners' | 'contiguous'>('contiguous');
 	let bgColor = $state('#ffffff');
 	let bgTolerance = $state(10);
 
@@ -187,6 +187,8 @@
 		requestAnimationFrame(() => {
 			const src = cloneImageData(imageState.processed!);
 			const data = src.data;
+			const width = src.width;
+			const height = src.height;
 
 			let targetR: number, targetG: number, targetB: number;
 
@@ -200,9 +202,9 @@
 				// Sample corners to detect background color
 				const corners = [
 					0, // top-left
-					(src.width - 1) * 4, // top-right
-					(src.height - 1) * src.width * 4, // bottom-left
-					((src.height - 1) * src.width + src.width - 1) * 4 // bottom-right
+					(width - 1) * 4, // top-right
+					(height - 1) * width * 4, // bottom-left
+					((height - 1) * width + width - 1) * 4 // bottom-right
 				];
 
 				let rSum = 0,
@@ -221,18 +223,61 @@
 			const tolerance = bgTolerance;
 			let removed = 0;
 
-			for (let i = 0; i < data.length; i += 4) {
-				const r = data[i];
-				const g = data[i + 1];
-				const b = data[i + 2];
-
+			// Helper to check if a pixel matches the target color
+			const matchesTarget = (idx: number): boolean => {
+				const r = data[idx];
+				const g = data[idx + 1];
+				const b = data[idx + 2];
 				const diff = Math.sqrt(
 					Math.pow(r - targetR, 2) + Math.pow(g - targetG, 2) + Math.pow(b - targetB, 2)
 				);
+				return diff <= tolerance;
+			};
 
-				if (diff <= tolerance) {
-					data[i + 3] = 0; // Set alpha to 0
-					removed++;
+			if (bgRemovalMode === 'contiguous') {
+				// Flood-fill from corners - only remove connected background pixels
+				const visited = new Uint8Array(width * height);
+
+				// Scanline flood-fill algorithm
+				const floodFill = (startX: number, startY: number) => {
+					const stack: Array<[number, number]> = [[startX, startY]];
+
+					while (stack.length > 0) {
+						const [x, y] = stack.pop()!;
+
+						if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+						const pixelIdx = y * width + x;
+						if (visited[pixelIdx]) continue;
+
+						const dataIdx = pixelIdx * 4;
+						if (data[dataIdx + 3] === 0) continue; // Already transparent
+						if (!matchesTarget(dataIdx)) continue;
+
+						visited[pixelIdx] = 1;
+						data[dataIdx + 3] = 0; // Set alpha to 0
+						removed++;
+
+						// Add neighboring pixels to stack
+						stack.push([x + 1, y]);
+						stack.push([x - 1, y]);
+						stack.push([x, y + 1]);
+						stack.push([x, y - 1]);
+					}
+				};
+
+				// Start flood-fill from all four corners
+				floodFill(0, 0);
+				floodFill(width - 1, 0);
+				floodFill(0, height - 1);
+				floodFill(width - 1, height - 1);
+			} else {
+				// Original behavior: remove all matching pixels
+				for (let i = 0; i < data.length; i += 4) {
+					if (matchesTarget(i)) {
+						data[i + 3] = 0; // Set alpha to 0
+						removed++;
+					}
 				}
 			}
 
@@ -871,7 +916,8 @@
 										class="w-full rounded bg-gray-700 px-2 py-1 text-xs"
 										bind:value={bgRemovalMode}
 									>
-										<option value="corners">Auto-detect from corners</option>
+										<option value="contiguous">Contiguous (flood fill)</option>
+										<option value="corners">All matching pixels</option>
 										<option value="color">Specific color</option>
 									</select>
 								</div>
