@@ -578,14 +578,18 @@
 		requestAnimationFrame(() => {
 			let currentData = cloneImageData(imageState.processed!);
 
-			// 1. Remove background (using corners detection)
+			// 1. Remove background (using contiguous flood-fill from corners)
 			statusMessage = 'Removing background...';
 			const bgData = currentData.data;
+			const bgWidth = currentData.width;
+			const bgHeight = currentData.height;
+
+			// Sample corners to detect background color
 			const corners = [
 				0,
-				(currentData.width - 1) * 4,
-				(currentData.height - 1) * currentData.width * 4,
-				((currentData.height - 1) * currentData.width + currentData.width - 1) * 4
+				(bgWidth - 1) * 4,
+				(bgHeight - 1) * bgWidth * 4,
+				((bgHeight - 1) * bgWidth + bgWidth - 1) * 4
 			];
 			let rSum = 0,
 				gSum = 0,
@@ -599,16 +603,42 @@
 			const targetG = Math.round(gSum / 4);
 			const targetB = Math.round(bSum / 4);
 
-			for (let i = 0; i < bgData.length; i += 4) {
+			// Helper to check if a pixel matches the target color
+			const matchesTarget = (idx: number): boolean => {
+				const r = bgData[idx];
+				const g = bgData[idx + 1];
+				const b = bgData[idx + 2];
 				const diff = Math.sqrt(
-					Math.pow(bgData[i] - targetR, 2) +
-						Math.pow(bgData[i + 1] - targetG, 2) +
-						Math.pow(bgData[i + 2] - targetB, 2)
+					Math.pow(r - targetR, 2) + Math.pow(g - targetG, 2) + Math.pow(b - targetB, 2)
 				);
-				if (diff <= bgTolerance) {
-					bgData[i + 3] = 0;
+				return diff <= bgTolerance;
+			};
+
+			// Flood-fill from corners
+			const visited = new Uint8Array(bgWidth * bgHeight);
+			const floodFill = (startX: number, startY: number) => {
+				const stack: Array<[number, number]> = [[startX, startY]];
+				while (stack.length > 0) {
+					const [x, y] = stack.pop()!;
+					if (x < 0 || x >= bgWidth || y < 0 || y >= bgHeight) continue;
+					const pixelIdx = y * bgWidth + x;
+					if (visited[pixelIdx]) continue;
+					const dataIdx = pixelIdx * 4;
+					if (bgData[dataIdx + 3] === 0) continue;
+					if (!matchesTarget(dataIdx)) continue;
+					visited[pixelIdx] = 1;
+					bgData[dataIdx + 3] = 0;
+					stack.push([x + 1, y]);
+					stack.push([x - 1, y]);
+					stack.push([x, y + 1]);
+					stack.push([x, y - 1]);
 				}
-			}
+			};
+
+			floodFill(0, 0);
+			floodFill(bgWidth - 1, 0);
+			floodFill(0, bgHeight - 1);
+			floodFill(bgWidth - 1, bgHeight - 1);
 
 			// 2. Auto trim
 			statusMessage = 'Trimming...';
