@@ -7,6 +7,16 @@ export interface Demo {
 
 export const demos: Demo[] = [
 	{
+		title: 'imager',
+		description: `A powerful browser-based image manipulation tool.
+			
+			<p>Features include background removal using color or corner detection, 
+			cropping, scaling, padding, rotating, and auto-trimming. 
+			All processing happens locally in the browser.</p>`,
+		path: '/of/imager',
+		yearMonth: '2026-02'
+	},
+	{
 		title: 'mutant',
 		description: `A basic AI chat interface that evolves and mutates over time.
 

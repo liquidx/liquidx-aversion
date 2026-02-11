@@ -52,6 +52,9 @@
 	let cropEnd = $state<{ x: number; y: number } | null>(null);
 	let isDraggingCrop = $state(false);
 
+	// Rotate tool settings
+	let rotationAngle = $state(0);
+
 	// History for undo
 	let history: ImageData[] = $state([]);
 	let historyIndex = $state(-1);
@@ -271,6 +274,8 @@
 				floodFill(width - 1, 0);
 				floodFill(0, height - 1);
 				floodFill(width - 1, height - 1);
+				floodFill(0, Math.floor(height / 2));
+				floodFill(width - 1, Math.floor(height / 2));
 			} else {
 				// Original behavior: remove all matching pixels
 				for (let i = 0; i < data.length; i += 4) {
@@ -471,6 +476,55 @@
 		});
 	}
 
+	// Rotate image
+	function applyRotation() {
+		if (!imageState.processed) return;
+
+		const angleRad = (rotationAngle * Math.PI) / 180;
+		const cos = Math.abs(Math.cos(angleRad));
+		const sin = Math.abs(Math.sin(angleRad));
+
+		const srcWidth = imageState.processed.width;
+		const srcHeight = imageState.processed.height;
+
+		// Calculate new dimensions to fit rotated image
+		const newWidth = Math.ceil(srcWidth * cos + srcHeight * sin);
+		const newHeight = Math.ceil(srcWidth * sin + srcHeight * cos);
+
+		isProcessing = true;
+		statusMessage = `Rotating ${rotationAngle}°...`;
+
+		requestAnimationFrame(() => {
+			// Put source image on a temp canvas
+			const srcCanvas = document.createElement('canvas');
+			srcCanvas.width = srcWidth;
+			srcCanvas.height = srcHeight;
+			const srcCtx = srcCanvas.getContext('2d')!;
+			srcCtx.putImageData(imageState.processed!, 0, 0);
+
+			// Create destination canvas with new dimensions
+			const dstCanvas = document.createElement('canvas');
+			dstCanvas.width = newWidth;
+			dstCanvas.height = newHeight;
+			const dstCtx = dstCanvas.getContext('2d')!;
+
+			// Clear with transparent background
+			dstCtx.clearRect(0, 0, newWidth, newHeight);
+
+			// Move to center, rotate, then draw image centered
+			dstCtx.translate(newWidth / 2, newHeight / 2);
+			dstCtx.rotate((rotationAngle * Math.PI) / 180);
+			dstCtx.drawImage(srcCanvas, -srcWidth / 2, -srcHeight / 2);
+
+			const rotated = dstCtx.getImageData(0, 0, newWidth, newHeight);
+			applyImageData(rotated);
+			pushToHistory(rotated);
+
+			isProcessing = false;
+			statusMessage = `Rotated ${rotationAngle}° (${newWidth} × ${newHeight} pixels)`;
+		});
+	}
+
 	// Crop tool functions
 	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
 		const canvas = previewCanvas;
@@ -639,6 +693,8 @@
 			floodFill(bgWidth - 1, 0);
 			floodFill(0, bgHeight - 1);
 			floodFill(bgWidth - 1, bgHeight - 1);
+			floodFill(0, Math.floor(bgHeight / 2));
+			floodFill(bgWidth - 1, Math.floor(bgHeight / 2));
 
 			// 2. Auto trim
 			statusMessage = 'Trimming...';
@@ -1134,6 +1190,43 @@
 												bind:value={padHeight}
 											/>
 										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Rotate -->
+						<div class="w-32 flex-shrink-0 lg:w-auto">
+							<div class="flex flex-col lg:flex-col-reverse">
+								<button
+									class="w-full rounded bg-blue-600 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+									onclick={applyRotation}
+									disabled={!imageLoaded || isProcessing}
+								>
+									Rotate
+								</button>
+								<div class="py-3">
+									<label for="rotation-angle" class="mb-1 block text-xs text-gray-400"
+										>Angle: {rotationAngle}°</label
+									>
+									<input
+										id="rotation-angle"
+										type="number"
+										min="-360"
+										max="360"
+										step="1"
+										class="w-full rounded bg-gray-700 px-1 py-1 text-xs"
+										bind:value={rotationAngle}
+									/>
+									<div class="mt-2 flex flex-wrap gap-1">
+										{#each [-90, -45, 45, 90, 180] as preset}
+											<button
+												class="rounded bg-gray-700 px-2 py-0.5 text-xs hover:bg-gray-600"
+												onclick={() => (rotationAngle = preset)}
+											>
+												{preset}°
+											</button>
+										{/each}
 									</div>
 								</div>
 							</div>
