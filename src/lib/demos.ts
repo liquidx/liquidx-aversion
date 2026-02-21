@@ -7,6 +7,16 @@ export interface Demo {
 
 export const demos: Demo[] = [
 	{
+		title: 'cataloger',
+		description: `A tool for extracting and cataloging snowboards from PDF files.
+			
+			<p>Simply drag and drop a PDF catalog. It parses the PDF, uses the 
+			FAL.ai SAM-3 API to extract snowboards, and calls the Gemini API to 
+			identify their names automatically.</p>`,
+		path: '/of/cataloger',
+		yearMonth: '2026-02'
+	},
+	{
 		title: 'imager',
 		description: `A powerful browser-based image manipulation tool.
 			

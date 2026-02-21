@@ -6,10 +6,12 @@ import { postSimpleMessageToDiscord } from '$lib/discord.server';
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	try {
-		const { prompt, image } = await request.json();
+		const { prompt, image, images: providedImages } = await request.json();
 
-		if (!prompt || !image) {
-			return json({ error: 'Both prompt and image are required' }, { status: 400 });
+		const imagesToProcess = providedImages || (image ? [image] : []);
+
+		if (!prompt || imagesToProcess.length === 0) {
+			return json({ error: 'Both prompt and at least one image are required' }, { status: 400 });
 		}
 
 		if (!GEMINI_API_KEY) {
@@ -17,23 +19,42 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		}
 
 		const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-		
-		// Convert base64 image to the format Gemini expects
-		const imageData = {
-			inlineData: {
-				data: image.split(',')[1], // Remove data:image/png;base64, prefix
-				mimeType: 'image/png'
+		const imageParts: any[] = [];
+
+		for (const imgUrlStr of imagesToProcess) {
+			let inlineDataStr = '';
+			let mimeType = 'image/png';
+
+			if (imgUrlStr.startsWith('http')) {
+				const res = await fetch(imgUrlStr);
+				if (!res.ok) {
+					return json({ error: `Failed to fetch image URL: ${res.statusText}` }, { status: 400 });
+				}
+				const arrayBuffer = await res.arrayBuffer();
+				const bytes = new Uint8Array(arrayBuffer);
+				let binary = '';
+				for (let i = 0; i < bytes.byteLength; i++) {
+					binary += String.fromCharCode(bytes[i]);
+				}
+				inlineDataStr = btoa(binary);
+				mimeType = res.headers.get('content-type') || 'image/png';
+			} else {
+				inlineDataStr = imgUrlStr.split(',')[1]; // Remove data:image/...;base64, prefix
 			}
-		};
+
+			imageParts.push({
+				inlineData: {
+					data: inlineDataStr,
+					mimeType
+				}
+			});
+		}
 
 		const modelRequest = {
 			model: 'gemini-2.5-flash-lite-preview-06-17',
 			contents: [
 				{
-					parts: [
-						{ text: prompt },
-						imageData
-					]
+					parts: [{ text: prompt }, ...imageParts]
 				}
 			],
 			generationConfig: {

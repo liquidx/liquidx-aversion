@@ -22,6 +22,7 @@
 		"@sveltejs/kit": "^2.27.0",
 		"@sveltejs/vite-plugin-svelte": "^6.1.0",
 		"@tailwindcss/vite": "^4.1.11",
+		"@types/pdfjs-dist": "^2.10.378",
 		"@vitest/browser": "^3.2.4",
 		"eslint": "^9.32.0",
 		"eslint-config-prettier": "^10.1.8",
@@ -48,10 +49,12 @@
 		]
 	},
 	"dependencies": {
+		"@fal-ai/client": "^1.9.3",
 		"@google/genai": "^1.12.0",
 		"@google/generative-ai": "^0.24.1",
 		"@lucide/svelte": "^0.536.0",
 		"@types/three": "^0.179.0",
+		"pdfjs-dist": "^5.4.624",
 		"three": "^0.179.1",
 		"three-stdlib": "^2.36.0"
 	}

@@ -11,6 +11,7 @@
 	// State
 	let fileInput: HTMLInputElement;
 	let sourceCanvas: HTMLCanvasElement;
+	// svelte-ignore non_reactive_update
 	let previewCanvas: HTMLCanvasElement;
 	let isDragging = $state(false);
 	let imageLoaded = $state(false);
