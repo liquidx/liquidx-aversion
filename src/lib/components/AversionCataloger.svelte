@@ -50,25 +50,54 @@
 	function handleDrop(e: DragEvent) {
 		e.preventDefault();
 		isDragging = false;
-		const files = e.dataTransfer?.files;
-		if (files && files.length > 0) {
-			loadPdf(files[0]);
+		if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+			processFile(e.dataTransfer.files[0]);
 		}
 	}
 
 	function handleFileSelect(e: Event) {
 		const target = e.target as HTMLInputElement;
 		if (target.files && target.files.length > 0) {
-			loadPdf(target.files[0]);
+			processFile(target.files[0]);
 		}
 	}
 
-	async function loadPdf(file: File) {
-		if (file.type !== 'application/pdf') {
-			statusMessage = 'Please select a PDF file';
-			return;
+	async function processFile(file: File) {
+		if (file.type === 'application/pdf') {
+			await loadPdf(file);
+		} else if (file.type.startsWith('image/')) {
+			await loadImage(file);
+		} else {
+			statusMessage = 'Unsupported file type. Please upload a PDF or an image.';
 		}
+	}
 
+	async function loadImage(file: File) {
+		originalFilename = file.name.replace(/\.[^/.]+$/, '');
+		statusMessage = 'Loading image...';
+		pages = [];
+
+		const reader = new FileReader();
+		reader.onload = async (e) => {
+			const base64 = e.target?.result as string;
+			pages = [
+				{
+					pageNumber: 1,
+					canvas: null,
+					base64,
+					items: [],
+					status: 'pending_sam'
+				}
+			];
+			statusMessage = isFastMode ? 'Processing image...' : 'Image loaded. Ready to process.';
+			if (isFastMode) {
+				processPageWithSam(0);
+			}
+		};
+		reader.readAsDataURL(file);
+	}
+
+	async function loadPdf(file: File) {
 		originalFilename = file.name.replace(/\.[^/.]+$/, '');
 		statusMessage = 'Loading PDF...';
 		pages = [];
@@ -238,7 +267,7 @@
 		<div class="flex w-1/3 flex-col gap-6">
 			<input
 				type="file"
-				accept="application/pdf"
+				accept="application/pdf,image/*"
 				class="hidden"
 				bind:this={fileInput}
 				onchange={handleFileSelect}
@@ -256,7 +285,7 @@
 				onclick={() => fileInput.click()}
 			>
 				<div class="pointer-events-none text-center">
-					<p class="font-medium text-zinc-300">Drop catalog PDF here</p>
+					<p class="font-medium text-zinc-300">Drop catalog PDF or image here</p>
 					<p class="mt-1 text-sm text-zinc-500">or click to upload</p>
 				</div>
 			</button>

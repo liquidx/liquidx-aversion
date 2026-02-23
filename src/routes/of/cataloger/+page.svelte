@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Snowline // Cataloger</title>
+	<title>Cataloger // a version one</title>
 </svelte:head>
 
 <div class="h-screen w-full">

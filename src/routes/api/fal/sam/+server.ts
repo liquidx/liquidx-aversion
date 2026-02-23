@@ -51,7 +51,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 				apply_mask: true,
 				output_format: 'png',
 				return_multiple_masks: true,
-				max_masks: 10,
+				max_masks: 20,
 				include_boxes: true
 			},
 			logs: true,
