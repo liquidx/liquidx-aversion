@@ -19,7 +19,7 @@
 	onMount(() => {
 		// Initialize Three.js scene
 		initScene();
-		
+
 		// Start animation loop
 		animate();
 
@@ -44,10 +44,10 @@
 		camera.position.z = 5;
 
 		// Create renderer
-		renderer = new THREE.WebGLRenderer({ 
+		renderer = new THREE.WebGLRenderer({
 			canvas,
 			antialias: true,
-			alpha: true 
+			alpha: true
 		});
 		renderer.setSize(width, height);
 		renderer.setPixelRatio(window.devicePixelRatio);
@@ -59,20 +59,20 @@
 	function createParticles() {
 		const particlesGeometry = new THREE.BufferGeometry();
 		const particleCount = 1000;
-		
+
 		const positions = new Float32Array(particleCount * 3);
 		const colors = new Float32Array(particleCount * 3);
 
 		for (let i = 0; i < particleCount; i++) {
 			const i3 = i * 3;
-			
+
 			// Random positions
 			positions[i3] = (Math.random() - 0.5) * 20;
 			positions[i3 + 1] = (Math.random() - 0.5) * 20;
 			positions[i3 + 2] = (Math.random() - 0.5) * 20;
 
 			// Green matrix-like colors
-			colors[i3] = 0.0;     // Red
+			colors[i3] = 0.0; // Red
 			colors[i3 + 1] = Math.random() * 0.5 + 0.5; // Green
 			colors[i3 + 2] = 0.0; // Blue
 		}
@@ -122,7 +122,7 @@
 		pointer-events: none;
 		z-index: -1;
 	}
-	
+
 	canvas {
 		display: block;
 		width: 100%;

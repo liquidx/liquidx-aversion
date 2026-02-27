@@ -113,7 +113,7 @@
 	<div class="flex-1 overflow-y-auto py-3">
 		{#each participants as participant}
 			<div
-				class="flex items-center px-3 py-1 hover:bg-gray-700 cursor-pointer relative"
+				class="relative flex cursor-pointer items-center px-3 py-1 hover:bg-gray-700"
 				onclick={() => handleEditParticipant(participant)}
 				role="button"
 				tabindex="0"
@@ -191,28 +191,28 @@
 
 <!-- Personality Edit Popover -->
 {#if editingParticipant}
-	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-		<div class="bg-gray-800 rounded-lg p-4 w-96 flex flex-col">
-			<h3 class="text-sm font-bold text-white mb-3">
+	<div class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+		<div class="flex w-96 flex-col rounded-lg bg-gray-800 p-4">
+			<h3 class="mb-3 text-sm font-bold text-white">
 				Edit Personality - {editingParticipant.username}
 			</h3>
 
 			<textarea
 				bind:value={tempPersonality}
 				placeholder="Enter personality description..."
-				class="w-full h-24 bg-gray-700 text-white text-xs p-2 rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none mb-3"
+				class="mb-3 h-24 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-xs text-white focus:border-blue-500 focus:outline-none"
 			></textarea>
 
 			<div class="flex justify-end space-x-2">
 				<button
 					onclick={handleCancelPersonalityEdit}
-					class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-500"
+					class="rounded bg-gray-600 px-3 py-1 text-xs text-white hover:bg-gray-500"
 				>
 					Cancel
 				</button>
 				<button
 					onclick={handleSavePersonality}
-					class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-500"
+					class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500"
 				>
 					Save
 				</button>

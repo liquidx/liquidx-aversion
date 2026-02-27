@@ -1,9 +1,9 @@
 <script lang="ts">
 	import ToggleIconButton from './ToggleIconButton.svelte';
-	import { 
-		ArrowUp, 
-		ArrowDown, 
-		ArrowLeft, 
+	import {
+		ArrowUp,
+		ArrowDown,
+		ArrowLeft,
 		ArrowRight,
 		ArrowUpRight,
 		ArrowUpLeft,

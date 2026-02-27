@@ -56,13 +56,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			},
 			logs: true,
 			onQueueUpdate: (update) => {
-				if (update.status === 'IN_PROGRESS' && update.logs) {
-					update.logs.map((log) => log.message).forEach((msg) => console.log(msg));
-				}
+				// if (update.status === 'IN_PROGRESS' && update.logs) {
+				// 	update.logs.map((log) => log.message).forEach((msg) => console.log(msg));
+				// }
 			}
 		});
 
-		console.log('FAL SAM API result:', result.data);
+		console.log('FAL SAM API success: masks=', result.data.masks.length);
 		return json({ response: result.data as FALSAMResponse });
 	} catch (error) {
 		console.error('Error calling FAL SAM API:', error);

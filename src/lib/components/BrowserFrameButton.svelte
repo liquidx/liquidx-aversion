@@ -13,8 +13,8 @@
 	const disabledClasses = 'text-gray-400 cursor-not-allowed';
 </script>
 
-<button 
-	class="{baseClasses} {disabled ? disabledClasses : normalClasses}" 
+<button
+	class="{baseClasses} {disabled ? disabledClasses : normalClasses}"
 	onclick={disabled ? undefined : onclick}
 	{disabled}
 >

@@ -21,19 +21,14 @@ export class ThreeScene {
 		}
 
 		// Create camera
-		this.camera = new THREE.PerspectiveCamera(
-			75,
-			config.width / config.height,
-			0.1,
-			1000
-		);
+		this.camera = new THREE.PerspectiveCamera(75, config.width / config.height, 0.1, 1000);
 		this.camera.position.z = 5;
 
 		// Create renderer
-		this.renderer = new THREE.WebGLRenderer({ 
+		this.renderer = new THREE.WebGLRenderer({
 			canvas,
 			antialias: true,
-			alpha: true 
+			alpha: true
 		});
 		this.renderer.setSize(config.width, config.height);
 		this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -68,11 +63,11 @@ export class ThreeScene {
 	startAnimation(callback?: () => void) {
 		const animate = () => {
 			this.animationId = requestAnimationFrame(animate);
-			
+
 			if (callback) {
 				callback();
 			}
-			
+
 			this.render();
 		};
 		animate();
@@ -104,14 +99,17 @@ export function createRotatingCube(color: number = 0x00ff00, wireframe: boolean 
 	return new THREE.Mesh(geometry, material);
 }
 
-export function createParticleSystem(count: number = 1000, color: THREE.Color = new THREE.Color(0x00ff00)) {
+export function createParticleSystem(
+	count: number = 1000,
+	color: THREE.Color = new THREE.Color(0x00ff00)
+) {
 	const geometry = new THREE.BufferGeometry();
 	const positions = new Float32Array(count * 3);
 	const colors = new Float32Array(count * 3);
 
 	for (let i = 0; i < count; i++) {
 		const i3 = i * 3;
-		
+
 		// Random positions
 		positions[i3] = (Math.random() - 0.5) * 20;
 		positions[i3 + 1] = (Math.random() - 0.5) * 20;

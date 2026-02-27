@@ -265,7 +265,10 @@
 				if (args.length === 1) {
 					output = ['gemini: Please provide a prompt. Usage: gemini "your question here"'];
 				} else {
-					const prompt = args.slice(1).join(' ').replace(/^["']|["']$/g, '');
+					const prompt = args
+						.slice(1)
+						.join(' ')
+						.replace(/^["']|["']$/g, '');
 
 					// Add command to history immediately with loading message
 					const loadingEntry: HistoryEntry = {

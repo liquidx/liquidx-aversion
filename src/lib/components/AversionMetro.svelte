@@ -2,16 +2,7 @@
 	import ColorSelector from './ColorSelector.svelte';
 	import LabelPositionControl from './LabelPositionControl.svelte';
 	import ModeSelector from './ModeSelector.svelte';
-	import {
-		Link2,
-		Trash2,
-		Undo2,
-		Save,
-		FolderOpen,
-		X,
-		Plus,
-		GripVertical
-	} from '@lucide/svelte';
+	import { Link2, Trash2, Undo2, Save, FolderOpen, X, Plus, GripVertical } from '@lucide/svelte';
 
 	interface Station {
 		id: string;
@@ -384,7 +375,7 @@
 		const touchRadiusPixels = STATION_RADIUS * 4; // 32px radius for touch
 		const mouseRadiusPixels = STATION_RADIUS * 2; // 16px radius for mouse
 		const radiusPixels = isTouch ? touchRadiusPixels : mouseRadiusPixels;
-		
+
 		// Scale the radius based on current zoom level (viewBox scale)
 		const scale = viewBox.width / SVG_WIDTH; // Current zoom scale
 		const selectionRadius = radiusPixels * scale;
@@ -1092,10 +1083,7 @@
 	<div class="flex flex-col gap-3">
 		<!-- Main toolbar row -->
 		<div class="flex flex-wrap items-center gap-2 sm:gap-4">
-			<ModeSelector
-				selectedMode={selectedTool}
-				onchange={(mode) => (selectedTool = mode)}
-			/>
+			<ModeSelector selectedMode={selectedTool} onchange={(mode) => (selectedTool = mode)} />
 
 			<div class="flex items-center gap-2">
 				<button

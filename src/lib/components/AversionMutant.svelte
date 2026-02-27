@@ -108,7 +108,7 @@
 					<div class="mb-1 text-xs opacity-60">
 						{message.role === 'user' ? 'You' : 'AI'} · {formatTime(message.timestamp)}
 					</div>
-					<div class="whitespace-pre-wrap text-sm">{message.content}</div>
+					<div class="text-sm whitespace-pre-wrap">{message.content}</div>
 				</div>
 			</div>
 		{/each}
@@ -124,7 +124,7 @@
 </div>
 
 <!-- Fixed Input Area at Bottom -->
-<div class="fixed bottom-0 left-0 right-0 border-t border-gray-700 bg-gray-800 p-4">
+<div class="fixed right-0 bottom-0 left-0 border-t border-gray-700 bg-gray-800 p-4">
 	<div class="mx-auto flex max-w-4xl items-center space-x-2">
 		<input
 			bind:this={inputElement}
