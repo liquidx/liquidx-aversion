@@ -129,7 +129,8 @@
 			// Render pages sequentially to avoid overwhelming memory
 			for (let i = 1; i <= pdf.numPages; i++) {
 				const page = await pdf.getPage(i);
-				const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
+				const viewport = page.getViewport({ scale: 4.0 }); // Higher scale for better quality
+				console.log(viewport);
 
 				const canvas = document.createElement('canvas');
 				const ctx = canvas.getContext('2d')!;
