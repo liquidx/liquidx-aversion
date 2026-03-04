@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 
 import type { RequestHandler } from './$types';
-import { generateSVG } from '$lib/server/generator.svelte';
+import { generateSVG } from '$lib/virtual-browser/generator.svelte';
 
 export const HEAD: RequestHandler = async () => {
 	console.log('HEAD request to /api/browse-again/img');

@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { generateHtml, generateJavascript } from '$lib/server/generator.svelte';
+import { generateHtml, generateJavascript } from '$lib/virtual-browser/generator.svelte';
 import { dev } from '$app/environment';
 
 import type { RequestHandler } from './$types';
