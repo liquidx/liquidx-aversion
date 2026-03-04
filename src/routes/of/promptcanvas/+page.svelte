@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Prompt Canvas - Aversion</title>
+	<title>Prompt Canvas // a version one</title>
 	<meta name="description" content="Interactive canvas for images and text editing" />
 </svelte:head>
 

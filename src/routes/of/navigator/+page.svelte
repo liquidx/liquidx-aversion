@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Mind Navigator</title>
+	<title>Mind Navigator // a version one</title>
 </svelte:head>
 
 <div class="rounded-xl p-4" style="background-color: #008080;">

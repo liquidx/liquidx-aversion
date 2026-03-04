@@ -15,13 +15,13 @@ export const demos: Demo[] = [
 		yearMonth: '2026-03'
 	},
 	{
-		title: 'cataloger',
-		description: `A tool for extracting and cataloging snowboards from PDF files.
+		title: 'imageextract',
+		description: `A tool for extracting and cataloging snowboards from PDF & image files.
 			
 			<p>Simply drag and drop a PDF catalog. It parses the PDF, uses the 
 			FAL.ai SAM-3 API to extract snowboards, and calls the Gemini API to 
 			identify their names automatically.</p>`,
-		path: '/of/cataloger',
+		path: '/of/imageextract',
 		yearMonth: '2026-02'
 	},
 	{

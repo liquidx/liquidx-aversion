@@ -252,7 +252,7 @@
 
 <div class="flex h-full flex-col bg-zinc-950 text-white">
 	<div class="flex items-center justify-between border-b border-zinc-800 bg-zinc-900 px-6 py-4">
-		<h1 class="text-xl leading-none font-bold text-green-400">AversionCataloger</h1>
+		<h1 class="text-xl leading-none font-bold text-green-400">Image Extractor</h1>
 		<div class="flex items-center gap-4 text-sm text-zinc-400">
 			<label class="flex cursor-pointer items-center gap-2">
 				<input type="checkbox" bind:checked={isFastMode} class="accent-green-500" />

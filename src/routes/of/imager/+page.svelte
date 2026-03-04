@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Imager - Image Manipulation Tool</title>
+	<title>Image Editor // a version one</title>
 </svelte:head>
 
 <AversionImager />

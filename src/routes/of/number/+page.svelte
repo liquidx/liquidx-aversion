@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>aversion.one - number</title>
+	<title>Number // a version one</title>
 </svelte:head>
 
 <AversionThreeDimField />
