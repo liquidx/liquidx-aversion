@@ -26,7 +26,7 @@
 
 		try {
 			// Make a request to the browse API
-			const response = await fetch('/api/html', {
+			const response = await fetch('/api/browse-again/html', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

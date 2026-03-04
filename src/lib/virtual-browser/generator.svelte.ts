@@ -164,7 +164,7 @@ IMPORTANT: Output ONLY the complete HTML document within <html> tags. NO explana
 		Promise.all(images.map(async (img) => {
 			try {
 				console.log('Loading image: ' + img.url);
-				const response = await fetch('${baseUrl}/api/img', {
+				const response = await fetch('${baseUrl}/api/browse-again/img', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ url: img.url, description: img.description, width: img.width, height: img.height })

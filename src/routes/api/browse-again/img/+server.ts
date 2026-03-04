@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 import { generateSVG } from '$lib/server/generator.svelte';
 
 export const HEAD: RequestHandler = async () => {
-	console.log('HEAD request to /api/img');
+	console.log('HEAD request to /api/browse-again/img');
 	return new Response('', {
 		headers: {
 			'Access-Control-Allow-Headers': '*',
@@ -14,7 +14,7 @@ export const HEAD: RequestHandler = async () => {
 };
 
 export const OPTIONS: RequestHandler = async () => {
-	console.log('OPTIONS request to /api/img');
+	console.log('OPTIONS request to /api/browse-again/img');
 	return new Response('', {
 		headers: {
 			'Access-Control-Allow-Headers': '*',
@@ -24,7 +24,7 @@ export const OPTIONS: RequestHandler = async () => {
 };
 
 export const POST: RequestHandler = async ({ request }) => {
-	console.log('GET request to /api/img');
+	console.log('GET request to /api/browse-again/img');
 
 	const params = await request.json();
 
