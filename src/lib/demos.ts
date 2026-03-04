@@ -7,6 +7,14 @@ export interface Demo {
 
 export const demos: Demo[] = [
 	{
+		title: 'llmavigator',
+		description: `Second implementation of the navigator for an LLM. 
+		
+		<p>Forked and rewritten mostly from scratch for the Mistral Worldwide Hackathon.</p>`,
+		path: '/of/llmavigator',
+		yearMonth: '2026-03'
+	},
+	{
 		title: 'cataloger',
 		description: `A tool for extracting and cataloging snowboards from PDF files.
 			

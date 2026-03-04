@@ -3,6 +3,10 @@
 	import { demos } from '$lib/demos.js';
 </script>
 
+<svelte:head>
+	<title>A Version One</title>
+</svelte:head>
+
 <div class="p-4 text-xs">
 	a running set of demos built by
 	<a class="underline" href="https://liquidx.net/" target="_blank">@liquidx</a>
