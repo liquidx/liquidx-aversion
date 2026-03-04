@@ -1,0 +1,5 @@
+{
+	"name": "liquidx-aversion-game-server",
+	"main": "src/lib/partykit/game-server.ts",
+	"compatibilityDate": "2023-10-10"
+}
