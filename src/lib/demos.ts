@@ -7,6 +7,14 @@ export interface Demo {
 
 export const demos: Demo[] = [
 	{
+		title: 'qrcode',
+		description: `A highly customizable QR Code generator.
+		
+		<p>Generates SVG QR codes locally in your browser. Supports URLs, Text, and vCards. You can customize colors, dot styles (square, rounded, circle), and download the result as an SVG.</p>`,
+		path: '/of/qrcode',
+		yearMonth: '2026-03'
+	},
+	{
 		title: 'llmavigator',
 		description: `Second implementation of the navigator for an LLM. 
 		
