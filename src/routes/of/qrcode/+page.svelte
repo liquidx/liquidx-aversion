@@ -19,7 +19,7 @@
 		url: 'https://example.com'
 	});
 
-	let dotStyle = $state<'square' | 'circle' | 'rounded' | 'custom'>('square');
+	let dotStyle = $state<'square' | 'circle' | 'rounded' | 'code' | 'custom'>('square');
 	let dotSize = $state(1.0);
 	let dotRadius = $state(0.3);
 	let isHollow = $state(false);
@@ -113,7 +113,7 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 
 	// Compile the custom function whenever the code changes; error captured without side effects
 	let customFnResult = $derived.by(() => {
-		if (dotStyle !== 'custom') return { fn: null, error: '' };
+		if (dotStyle !== 'code' && dotStyle !== 'custom') return { fn: null, error: '' };
 		try {
 			const fn = new Function(
 				'x', 'y', 'cell', 'size', 'dotSize',
@@ -384,52 +384,60 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 							: 'border-neutral-300 opacity-60 hover:opacity-100 dark:border-neutral-700'}"
 						onclick={() => (dotStyle = 'custom')}
 					>
-						<Code size={24} />
+						<Sparkles size={24} />
 						<span class="text-xs">Custom</span>
+					</button>
+					<button
+						class="flex flex-1 flex-col items-center gap-2 rounded-md border p-3 transition-all {dotStyle ===
+						'code'
+							? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+							: 'border-neutral-300 opacity-60 hover:opacity-100 dark:border-neutral-700'}"
+						onclick={() => (dotStyle = 'code')}
+					>
+						<Code size={24} />
+						<span class="text-xs">Code</span>
 					</button>
 				</div>
 			</div>
 
 			{#if dotStyle === 'custom'}
+				<div class="flex flex-col gap-4">
+					<div class="text-xs font-bold tracking-wider uppercase opacity-50">Describe Your Effect</div>
+					<textarea
+						class="{inputClass} min-h-28 text-sm leading-relaxed"
+						placeholder="e.g. dots that pulse outward from the centre like a heartbeat, with warm colours fading from orange to pink"
+						bind:value={aiDescription}
+						disabled={aiGenerating}
+					></textarea>
+					<button
+						class="flex items-center justify-center gap-2 rounded-md bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+						onclick={generateWithAI}
+						disabled={aiGenerating || !aiDescription.trim()}
+					>
+						{#if aiGenerating}
+							<Loader size={16} class="animate-spin" />
+							Generating…
+						{:else}
+							<Sparkles size={16} />
+							Generate with AI
+						{/if}
+					</button>
+					{#if aiError}
+						<div class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+							{aiError}
+						</div>
+					{/if}
+					{#if customFnResult.error}
+						<div class="rounded-md bg-red-50 px-3 py-2 font-mono text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+							{customFnResult.error}
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			{#if dotStyle === 'code'}
 				<div class="flex flex-col gap-2">
 					<div class="text-xs font-bold tracking-wider uppercase opacity-50">Pixel Renderer (JS)</div>
-
-					<!-- AI generation -->
-					<div class="flex flex-col gap-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
-						<div class="flex items-center gap-1.5 text-xs font-medium opacity-60">
-							<Sparkles size={13} />
-							Generate with AI
-						</div>
-						<div class="flex gap-2">
-							<input
-								type="text"
-								class="{inputClass} flex-1 py-1.5 text-xs"
-								placeholder="e.g. dots that pulse like a heartbeat from the centre"
-								bind:value={aiDescription}
-								onkeydown={(e) => e.key === 'Enter' && generateWithAI()}
-								disabled={aiGenerating}
-							/>
-							<button
-								class="flex shrink-0 items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-								onclick={generateWithAI}
-								disabled={aiGenerating || !aiDescription.trim()}
-							>
-								{#if aiGenerating}
-									<Loader size={13} class="animate-spin" />
-									Generating…
-								{:else}
-									<Sparkles size={13} />
-									Generate
-								{/if}
-							</button>
-						</div>
-						{#if aiError}
-							<div class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-								{aiError}
-							</div>
-						{/if}
-					</div>
-
 					<!-- Example presets -->
 					<div class="flex flex-wrap gap-1">
 						{#each examples as ex}
@@ -441,7 +449,6 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 							>{ex.name}</button>
 						{/each}
 					</div>
-
 					<!-- Code editor -->
 					<textarea
 						class="{inputClass} min-h-52 font-mono text-xs leading-relaxed"
@@ -593,7 +600,7 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 				{/if}
 				{#each qrData.data as row, y}
 					{#each row as cell, x}
-						{#if dotStyle === 'custom'}
+						{#if dotStyle === 'code' || dotStyle === 'custom'}
 							{@html callCustomFn(x, y, cell)}
 						{:else if cell}
 							{#if dotStyle === 'square'}
