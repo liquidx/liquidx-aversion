@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { encode } from 'uqr';
-	import { Download, Link as LinkIcon, Type, Contact, Square, Circle, Box, Code } from '@lucide/svelte';
+	import { Download, Link as LinkIcon, Type, Contact, Square, Circle, Box, Code, Sparkles, Loader } from '@lucide/svelte';
 
 	const inputClass =
 		'border border-neutral-300 dark:border-neutral-700 bg-transparent rounded-md px-3 py-2 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
@@ -138,6 +138,33 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 			) || '';
 		} catch {
 			return '';
+		}
+	}
+
+	let aiDescription = $state('');
+	let aiGenerating = $state(false);
+	let aiError = $state('');
+
+	async function generateWithAI() {
+		if (!aiDescription.trim() || aiGenerating) return;
+		aiGenerating = true;
+		aiError = '';
+		try {
+			const res = await fetch('/api/qrcode/generate-renderer', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ description: aiDescription })
+			});
+			const data = await res.json();
+			if (!res.ok || data.error) {
+				aiError = data.error ?? 'Generation failed';
+			} else {
+				customCode = data.code;
+			}
+		} catch {
+			aiError = 'Network error — could not reach the server';
+		} finally {
+			aiGenerating = false;
 		}
 	}
 
@@ -366,6 +393,44 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 			{#if dotStyle === 'custom'}
 				<div class="flex flex-col gap-2">
 					<div class="text-xs font-bold tracking-wider uppercase opacity-50">Pixel Renderer (JS)</div>
+
+					<!-- AI generation -->
+					<div class="flex flex-col gap-2 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
+						<div class="flex items-center gap-1.5 text-xs font-medium opacity-60">
+							<Sparkles size={13} />
+							Generate with AI
+						</div>
+						<div class="flex gap-2">
+							<input
+								type="text"
+								class="{inputClass} flex-1 py-1.5 text-xs"
+								placeholder="e.g. dots that pulse like a heartbeat from the centre"
+								bind:value={aiDescription}
+								onkeydown={(e) => e.key === 'Enter' && generateWithAI()}
+								disabled={aiGenerating}
+							/>
+							<button
+								class="flex shrink-0 items-center gap-1.5 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+								onclick={generateWithAI}
+								disabled={aiGenerating || !aiDescription.trim()}
+							>
+								{#if aiGenerating}
+									<Loader size={13} class="animate-spin" />
+									Generating…
+								{:else}
+									<Sparkles size={13} />
+									Generate
+								{/if}
+							</button>
+						</div>
+						{#if aiError}
+							<div class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+								{aiError}
+							</div>
+						{/if}
+					</div>
+
+					<!-- Example presets -->
 					<div class="flex flex-wrap gap-1">
 						{#each examples as ex}
 							<button
@@ -376,6 +441,8 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 							>{ex.name}</button>
 						{/each}
 					</div>
+
+					<!-- Code editor -->
 					<textarea
 						class="{inputClass} min-h-52 font-mono text-xs leading-relaxed"
 						bind:value={customCode}
