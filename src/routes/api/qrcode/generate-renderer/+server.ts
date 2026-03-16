@@ -70,7 +70,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const userPrompt = `Write a QR code pixel renderer for the following effect:\n\n${description.trim()}`;
 
 		const response = await ai.models.generateContent({
-			model: 'gemini-2.5-flash-preview-04-17',
+			model: 'gemini-3-flash-preview',
 			contents: userPrompt,
 			config: {
 				systemInstruction: SYSTEM_PROMPT,
