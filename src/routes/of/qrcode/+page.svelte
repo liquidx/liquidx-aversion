@@ -156,10 +156,11 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 				body: JSON.stringify({ description: aiDescription })
 			});
 			const data = await res.json();
-			if (!res.ok || data.error) {
-				aiError = data.error ?? 'Generation failed';
-			} else {
-				customCode = data.code;
+			// Always load the code if the server returned it (even on 422 syntax errors),
+			// so the user can inspect or switch to Code mode to fix it.
+			if (data.code) customCode = data.code;
+			if (data.error) {
+				aiError = data.error;
 			}
 		} catch {
 			aiError = 'Network error — could not reach the server';
@@ -422,14 +423,15 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 							Generate with AI
 						{/if}
 					</button>
-					{#if aiError}
-						<div class="rounded-md bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-							{aiError}
-						</div>
-					{/if}
-					{#if customFnResult.error}
-						<div class="rounded-md bg-red-50 px-3 py-2 font-mono text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-							{customFnResult.error}
+					{#if aiError || customFnResult.error}
+						<div class="flex flex-col gap-2 rounded-md bg-red-50 px-3 py-2.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+							<p>{aiError || customFnResult.error}</p>
+							{#if customCode}
+								<button
+									class="self-start rounded border border-red-300 px-2 py-1 text-xs font-medium transition-colors hover:bg-red-100 dark:border-red-700 dark:hover:bg-red-900/40"
+									onclick={() => (dotStyle = 'code')}
+								>Open in Code mode to inspect &amp; fix →</button>
+							{/if}
 						</div>
 					{/if}
 				</div>

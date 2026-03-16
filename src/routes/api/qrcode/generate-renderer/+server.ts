@@ -3,13 +3,13 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI } from '@google/genai';
 
+const ARGS = ['x', 'y', 'cell', 'size', 'dotSize', 'foreground', 'background', 'outlineColor', 'isHollow'];
+
 const SYSTEM_PROMPT = `You are an expert at writing creative SVG QR code pixel renderers.
 
-Your task is to write a JavaScript function body that renders a single QR code pixel as SVG.
+Your task is to write a JavaScript **function body** (not a function declaration) that renders a single QR code pixel as an SVG string.
 
-## Context
-
-The function body runs inside \`new Function(...args, body)\` and has these variables in scope:
+## Variables already in scope
 
 | Variable       | Type    | Description |
 |---------------|---------|-------------|
@@ -17,40 +17,98 @@ The function body runs inside \`new Function(...args, body)\` and has these vari
 | \`y\`           | number  | Row index, 0-based (0 to size-1) |
 | \`cell\`        | boolean | \`true\` = filled/dark QR pixel, \`false\` = empty/light |
 | \`size\`        | number  | Total QR grid dimension (e.g. 21 for a version-1 code) |
-| \`dotSize\`     | number  | Fill factor 0.1–1.0 (the user's dot size slider) |
+| \`dotSize\`     | number  | Fill factor 0.1–1.0 (user-controlled) |
 | \`foreground\`  | string  | CSS hex color for filled pixels, e.g. \`"#000000"\` |
-| \`background\`  | string  | CSS hex color for background, e.g. \`"#ffffff"\` |
-| \`outlineColor\`| string  | CSS hex color for outline/hollow accents, e.g. \`"#cccccc"\` |
+| \`background\`  | string  | CSS hex color for background |
+| \`outlineColor\`| string  | CSS hex color for outline accents |
 | \`isHollow\`    | boolean | Whether the user wants empty pixels drawn as outlines |
 
 ## SVG coordinate space
 
-- Each pixel occupies a **1×1 unit cell** at SVG coordinates (\`x\`, \`y\`) to (\`x+1\`, \`y+1\`).
-- The pixel **centre** is at (\`x + 0.5\`, \`y + 0.5\`).
-- A full-sized circle filling the cell: \`<circle cx="\${x+0.5}" cy="\${y+0.5}" r="0.5" />\`
-- A full-sized square filling the cell: \`<rect x="\${x}" y="\${y}" width="1" height="1" />\`
+Each pixel occupies a 1×1 unit cell at SVG position (x, y). Centre is at (x+0.5, y+0.5).
 
-## Rules
+## CRITICAL: Output format
 
-1. Return a **string** containing one or more SVG element(s), or \`''\` to render nothing.
-2. You MUST handle both \`cell === true\` and \`cell === false\` explicitly.
-3. Do NOT use \`function\` declarations, class syntax, or top-level \`return\` — this is a function body only.
-4. Do NOT use \`import\` or \`require\`.
-5. Use only standard JavaScript (\`Math\`, template literals, arithmetic). No external libraries.
-6. SVG attributes that are numbers should be computed inline; round to ≤4 decimal places.
-7. Use \`transform="rotate(angle, cx, cy)"\` for SVG rotations.
-8. Keep the code concise (under ~15 lines). Add a short comment at the top describing the effect.
+You must output ONLY bare JavaScript statements — no function wrapper of any kind.
 
-## Output format
+❌ WRONG — do NOT wrap in a function declaration:
+\`\`\`
+function render(x, y, cell) {
+  if (!cell) return '';
+  const r = dotSize * 0.5;
+  return \`<circle cx="\${x+0.5}" cy="\${y+0.5}" r="\${r}" fill="\${foreground}" />\`;
+}
+\`\`\`
 
-Respond with **ONLY** the raw JavaScript code. No markdown fences, no explanation, no prose.`;
+❌ WRONG — do NOT use an arrow function:
+\`\`\`
+(x, y, cell) => {
+  if (!cell) return '';
+  return \`<circle cx="\${x+0.5}" cy="\${y+0.5}" r="0.5" fill="\${foreground}" />\`;
+}
+\`\`\`
 
+❌ WRONG — do NOT wrap in const/let/var assignment:
+\`\`\`
+const render = () => { ... };
+\`\`\`
+
+✅ CORRECT — bare statements only, ending with a return:
+\`\`\`
+if (!cell) return '';
+const r = dotSize * 0.5;
+return \`<circle cx="\${x+0.5}" cy="\${y+0.5}" r="\${r}" fill="\${foreground}" />\`;
+\`\`\`
+
+## Additional rules
+
+- MUST handle both \`cell === true\` and \`cell === false\` (return \`''\` to render nothing for a case).
+- Do NOT use \`import\`, \`export\`, \`require\`, or \`class\`.
+- Use only \`Math\`, arithmetic, template literals, and string concatenation.
+- No external libraries.
+- Keep it concise (under 15 lines). Add a one-line comment at the top describing the effect.
+- Output ONLY the raw JavaScript. No markdown fences, no explanation.`;
+
+/** Strip markdown code fences that models sometimes add despite instructions. */
 function stripCodeFences(text: string): string {
-	// Remove ```javascript ... ``` or ``` ... ``` wrappers if Gemini adds them anyway
 	return text
-		.replace(/^```(?:javascript|js|svg)?\n?/i, '')
+		.replace(/^```(?:javascript|js|ts|svg|html)?\n?/i, '')
 		.replace(/\n?```\s*$/i, '')
 		.trim();
+}
+
+/**
+ * If the model wrapped the body in a function declaration or arrow function,
+ * extract just the body between the outermost { }.
+ */
+function unwrapFunction(code: string): string {
+	const trimmed = code.trim();
+
+	const looksLikeWrapper =
+		/^function[\s(]/.test(trimmed) ||           // function foo(...) { or function(...) {
+		/^(?:const|let|var)\s+\w+\s*=/.test(trimmed) || // const fn = ...
+		/^\([^)]*\)\s*=>/.test(trimmed) ||           // (...) => {
+		/^\w[\w\s,]*\s*=>/.test(trimmed);            // x => { or x, y => {
+
+	if (!looksLikeWrapper) return trimmed;
+
+	const firstBrace = trimmed.indexOf('{');
+	const lastBrace = trimmed.lastIndexOf('}');
+	if (firstBrace !== -1 && lastBrace > firstBrace) {
+		return trimmed.slice(firstBrace + 1, lastBrace).trim();
+	}
+
+	return trimmed;
+}
+
+/** Attempt to compile the code as a new Function body; return the error string or null. */
+function validateCode(code: string): string | null {
+	try {
+		new Function(...ARGS, code);
+		return null;
+	} catch (e) {
+		return String(e);
+	}
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -80,10 +138,20 @@ export const POST: RequestHandler = async ({ request }) => {
 		});
 
 		const raw = response.text ?? '';
-		const code = stripCodeFences(raw);
+		let code = stripCodeFences(raw);
+		code = unwrapFunction(code);
 
 		if (!code) {
 			return json({ error: 'Model returned an empty response' }, { status: 500 });
+		}
+
+		const syntaxError = validateCode(code);
+		if (syntaxError) {
+			// Return the code anyway so the client can show it to the user for inspection/editing
+			return json(
+				{ error: `Generated code has a syntax error — switch to Code mode to fix it. (${syntaxError})`, code },
+				{ status: 422 }
+			);
 		}
 
 		return json({ code });
