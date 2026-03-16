@@ -3,7 +3,7 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI } from '@google/genai';
 
-const ARGS = ['x', 'y', 'cell', 'size', 'dotSize', 'foreground', 'background', 'outlineColor', 'isHollow'];
+const ARGS = ['x', 'y', 'cell', 'type', 'size', 'dotSize', 'foreground', 'background', 'outlineColor', 'isHollow'];
 
 function buildPrompt(description: string): string {
 	return `Write JavaScript code that renders a single QR code pixel as an SVG shape.
@@ -11,6 +11,13 @@ function buildPrompt(description: string): string {
 The code runs as a function body. These variables are already in scope — do not declare them:
   x, y        — pixel column/row (integers, 0 to size-1)
   cell        — boolean: true = filled/dark pixel, false = empty/light pixel
+  type        — integer indicating the pixel's role in the QR code:
+                  -1 = Border (quiet zone around the code)
+                   0 = Data (actual encoded data)
+                   1 = Function (format/version information)
+                   2 = Position (the three corner finder squares)
+                   3 = Timing (alternating row/column lines)
+                   4 = Alignment (smaller alignment squares)
   size        — QR grid dimension (e.g. 21 for a small code)
   dotSize     — fill factor 0.1 to 1.0 (user-controlled slider)
   foreground  — CSS hex color for filled pixels, e.g. "#000000"
