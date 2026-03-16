@@ -87,8 +87,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			model: 'gemini-3-flash-preview',
 			contents: buildPrompt(description.trim()),
 			config: {
-				temperature: 1.0,
-				maxOutputTokens: 2048
+				temperature: 1.0
 			}
 		});
 
