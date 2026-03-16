@@ -3,7 +3,18 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import type { RequestHandler } from './$types';
 import { GoogleGenAI } from '@google/genai';
 
-const ARGS = ['x', 'y', 'cell', 'type', 'size', 'dotSize', 'foreground', 'background', 'outlineColor', 'isHollow'];
+const ARGS = [
+	'x',
+	'y',
+	'cell',
+	'type',
+	'size',
+	'dotSize',
+	'foreground',
+	'background',
+	'outlineColor',
+	'isHollow'
+];
 
 function buildPrompt(description: string): string {
 	return `Write JavaScript code that renders a single QR code pixel as an SVG shape.
@@ -94,7 +105,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			model: 'gemini-3-flash-preview',
 			contents: buildPrompt(description.trim()),
 			config: {
-				temperature: 1.0
+				temperature: 0.3,
+				maxOutputTokens: 8000
 			}
 		});
 
@@ -109,7 +121,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (syntaxError) {
 			// Return the code anyway so the client can load it into the editor for inspection
 			return json(
-				{ error: `Syntax error in generated code — switch to Code mode to fix it. (${syntaxError})`, code },
+				{
+					error: `Syntax error in generated code — switch to Code mode to fix it. (${syntaxError})`,
+					code
+				},
 				{ status: 422 }
 			);
 		}
