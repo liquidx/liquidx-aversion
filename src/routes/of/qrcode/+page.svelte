@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { encode } from 'uqr';
-	import { Download, Link as LinkIcon, Type, Contact, Square, Circle, Box } from '@lucide/svelte';
+	import { Download, Link as LinkIcon, Type, Contact, Square, Circle, Box, Code } from '@lucide/svelte';
 
 	const inputClass =
 		'border border-neutral-300 dark:border-neutral-700 bg-transparent rounded-md px-3 py-2 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
@@ -19,10 +19,55 @@
 		url: 'https://example.com'
 	});
 
-	let dotStyle = $state<'square' | 'circle' | 'rounded'>('square');
+	let dotStyle = $state<'square' | 'circle' | 'rounded' | 'custom'>('square');
 	let dotSize = $state(1.0);
 	let dotRadius = $state(0.3);
 	let isHollow = $state(false);
+
+	const defaultCustomCode = `// Available variables: x, y, cell, size, dotSize, foreground, background, outlineColor, isHollow
+// Return an SVG element string, or '' to render nothing.
+
+if (!cell) return '';
+
+// Ripple: dot radius varies with distance from center
+const dx = x - size / 2;
+const dy = y - size / 2;
+const dist = Math.sqrt(dx * dx + dy * dy);
+const r = dotSize * 0.5 * (0.4 + 0.6 * Math.abs(Math.sin(dist * 0.55)));
+
+return \`<circle cx="\${x + 0.5}" cy="\${y + 0.5}" r="\${r}" fill="\${foreground}" />\`;`;
+
+	let customCode = $state(defaultCustomCode);
+
+	// Compile the custom function whenever the code changes; error captured without side effects
+	let customFnResult = $derived.by(() => {
+		if (dotStyle !== 'custom') return { fn: null, error: '' };
+		try {
+			const fn = new Function(
+				'x', 'y', 'cell', 'size', 'dotSize',
+				'foreground', 'background', 'outlineColor', 'isHollow',
+				customCode
+			) as (
+				x: number, y: number, cell: boolean, size: number, dotSize: number,
+				foreground: string, background: string, outlineColor: string, isHollow: boolean
+			) => string;
+			return { fn, error: '' };
+		} catch (e) {
+			return { fn: null, error: String(e) };
+		}
+	});
+
+	function callCustomFn(x: number, y: number, cell: boolean): string {
+		if (!customFnResult.fn) return '';
+		try {
+			return customFnResult.fn(
+				x, y, cell, qrData.size, dotSize,
+				foreground, background, outlineColor, isHollow
+			) || '';
+		} catch {
+			return '';
+		}
+	}
 
 	let foreground = $state('#000000');
 	let outlineColor = $state('#cccccc');
@@ -233,8 +278,45 @@
 						<Circle size={24} />
 						<span class="text-xs">Circle</span>
 					</button>
+					<button
+						class="flex flex-1 flex-col items-center gap-2 rounded-md border p-3 transition-all {dotStyle ===
+						'custom'
+							? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+							: 'border-neutral-300 opacity-60 hover:opacity-100 dark:border-neutral-700'}"
+						onclick={() => (dotStyle = 'custom')}
+					>
+						<Code size={24} />
+						<span class="text-xs">Custom</span>
+					</button>
 				</div>
 			</div>
+
+			{#if dotStyle === 'custom'}
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center justify-between">
+						<div class="text-xs font-bold tracking-wider uppercase opacity-50">Pixel Renderer (JS)</div>
+						<button
+							class="text-xs opacity-40 transition-opacity hover:opacity-70"
+							onclick={() => (customCode = defaultCustomCode)}
+						>Reset to default</button>
+					</div>
+					<textarea
+						class="{inputClass} min-h-52 font-mono text-xs leading-relaxed"
+						bind:value={customCode}
+						spellcheck="false"
+						autocomplete="off"
+						autocapitalize="off"
+					></textarea>
+					{#if customFnResult.error}
+						<div class="rounded-md bg-red-50 px-3 py-2 font-mono text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+							{customFnResult.error}
+						</div>
+					{/if}
+					<p class="text-xs opacity-40">
+						Variables: <code>x</code>, <code>y</code>, <code>cell</code>, <code>size</code>, <code>dotSize</code>, <code>foreground</code>, <code>background</code>, <code>outlineColor</code>, <code>isHollow</code>. Return an SVG element string.
+					</p>
+				</div>
+			{/if}
 
 			{#if dotStyle === 'rounded'}
 				<div class="mt-2 flex flex-col gap-1">
@@ -368,7 +450,9 @@
 				{/if}
 				{#each qrData.data as row, y}
 					{#each row as cell, x}
-						{#if cell}
+						{#if dotStyle === 'custom'}
+							{@html callCustomFn(x, y, cell)}
+						{:else if cell}
 							{#if dotStyle === 'square'}
 								<rect
 									x={x + (1 - dotSize) / 2}
