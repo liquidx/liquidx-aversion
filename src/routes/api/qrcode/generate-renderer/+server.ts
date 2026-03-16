@@ -80,22 +80,35 @@ function stripCodeFences(text: string): string {
 /**
  * If the model wrapped the body in a function declaration or arrow function,
  * extract just the body between the outermost { }.
+ *
+ * IMPORTANT: we do NOT use lastIndexOf('}') because template literals inside
+ * the code contain '}' characters (e.g. `${foreground}` ends with '}'), which
+ * would cause lastIndexOf to find an inner brace and truncate the code.
+ * Instead we require the wrapper to end with '}' as its very last character,
+ * so the closing-brace position is simply trimmed.length - 1.
  */
 function unwrapFunction(code: string): string {
 	const trimmed = code.trim();
 
 	const looksLikeWrapper =
-		/^function[\s(]/.test(trimmed) ||           // function foo(...) { or function(...) {
+		/^function[\s(]/.test(trimmed) ||                // function foo(...) { or function(...) {
 		/^(?:const|let|var)\s+\w+\s*=/.test(trimmed) || // const fn = ...
-		/^\([^)]*\)\s*=>/.test(trimmed) ||           // (...) => {
-		/^\w[\w\s,]*\s*=>/.test(trimmed);            // x => { or x, y => {
+		/^\([^)]*\)\s*=>/.test(trimmed) ||               // (...) => {
+		/^\w[\w\s,]*\s*=>/.test(trimmed);                // x => { or x, y => {
 
 	if (!looksLikeWrapper) return trimmed;
 
-	const firstBrace = trimmed.indexOf('{');
-	const lastBrace = trimmed.lastIndexOf('}');
+	// Strip a trailing semicolon so `const fn = () => { ... };` also works
+	const withoutSemi = trimmed.endsWith(';') ? trimmed.slice(0, -1).trimEnd() : trimmed;
+
+	// Only proceed if the wrapper closes cleanly with '}'
+	// (valid code usually ends with a return statement ending in `;` or a string, not '}')
+	if (!withoutSemi.endsWith('}')) return trimmed;
+
+	const firstBrace = withoutSemi.indexOf('{');
+	const lastBrace = withoutSemi.length - 1; // we know this is '}'
 	if (firstBrace !== -1 && lastBrace > firstBrace) {
-		return trimmed.slice(firstBrace + 1, lastBrace).trim();
+		return withoutSemi.slice(firstBrace + 1, lastBrace).trim();
 	}
 
 	return trimmed;
