@@ -24,23 +24,24 @@
 	let dotRadius = $state(0.3);
 	let isHollow = $state(false);
 
-	const defaultCustomCode = `// Available variables: x, y, cell, size, dotSize, foreground, background, outlineColor, isHollow
-// Return an SVG element string, or '' to render nothing.
-
+	const defaultCustomCode = `// Simple circles — one per filled pixel
 if (!cell) return '';
-
-// Ripple: dot radius varies with distance from center
-const dx = x - size / 2;
-const dy = y - size / 2;
-const dist = Math.sqrt(dx * dx + dy * dy);
-const r = dotSize * 0.5 * (0.4 + 0.6 * Math.abs(Math.sin(dist * 0.55)));
-
+const r = dotSize * 0.5;
 return \`<circle cx="\${x + 0.5}" cy="\${y + 0.5}" r="\${r}" fill="\${foreground}" />\`;`;
 
 	const examples: { name: string; code: string }[] = [
 		{
-			name: 'Ripple',
+			name: 'Circle',
 			code: defaultCustomCode
+		},
+		{
+			name: 'Ripple',
+			code: `// Ripple: dot radius pulses with distance from centre
+if (!cell) return '';
+const dx = x - size / 2, dy = y - size / 2;
+const dist = Math.sqrt(dx * dx + dy * dy);
+const r = dotSize * 0.5 * (0.4 + 0.6 * Math.abs(Math.sin(dist * 0.55)));
+return \`<circle cx="\${x + 0.5}" cy="\${y + 0.5}" r="\${r}" fill="\${foreground}" />\`;`
 		},
 		{
 			name: 'Rainbow',
@@ -126,6 +127,19 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 			return { fn, error: '' };
 		} catch (e) {
 			return { fn: null, error: String(e) };
+		}
+	});
+
+	// Test-call the compiled function with a sample pixel to catch runtime errors early,
+	// before the render loop silently swallows them per pixel.
+	let customRuntimeError = $derived.by(() => {
+		if (!customFnResult.fn) return '';
+		try {
+			customFnResult.fn(5, 5, true,  21, 1.0, '#000000', '#ffffff', '#cccccc', false);
+			customFnResult.fn(5, 5, false, 21, 1.0, '#000000', '#ffffff', '#cccccc', false);
+			return '';
+		} catch (e) {
+			return String(e);
 		}
 	});
 
@@ -402,11 +416,20 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 			</div>
 
 			{#if dotStyle === 'custom'}
-				<div class="flex flex-col gap-4">
+				{@const suggestions = ['hexagons', 'stars', 'triangles', 'dots that shrink toward the edges', 'neon glow rings', 'rotating bars']}
+				<div class="flex flex-col gap-3">
 					<div class="text-xs font-bold tracking-wider uppercase opacity-50">Describe Your Effect</div>
+					<div class="flex flex-wrap gap-1.5">
+						{#each suggestions as s}
+							<button
+								class="rounded-full border border-neutral-300 px-2.5 py-1 text-xs opacity-50 transition-all hover:opacity-100 dark:border-neutral-700 {aiDescription === s ? 'border-blue-400 opacity-100 text-blue-600 dark:text-blue-400' : ''}"
+								onclick={() => (aiDescription = s)}
+							>{s}</button>
+						{/each}
+					</div>
 					<textarea
-						class="{inputClass} min-h-28 text-sm leading-relaxed"
-						placeholder="e.g. dots that pulse outward from the centre like a heartbeat, with warm colours fading from orange to pink"
+						class="{inputClass} min-h-20 text-sm leading-relaxed"
+						placeholder="e.g. hexagons, or stars, or dots that fade to nothing at the edges"
 						bind:value={aiDescription}
 						disabled={aiGenerating}
 					></textarea>
@@ -423,10 +446,10 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 							Generate with AI
 						{/if}
 					</button>
-					{#if aiError || customFnResult.error}
+					{#if aiError || customFnResult.error || customRuntimeError}
 						<div class="flex flex-col gap-2 rounded-md bg-red-50 px-3 py-2.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-							<p>{aiError || customFnResult.error}</p>
-							{#if customCode}
+							<p>{aiError || customFnResult.error || customRuntimeError}</p>
+							{#if !aiError}
 								<button
 									class="self-start rounded border border-red-300 px-2 py-1 text-xs font-medium transition-colors hover:bg-red-100 dark:border-red-700 dark:hover:bg-red-900/40"
 									onclick={() => (dotStyle = 'code')}
@@ -459,9 +482,9 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 						autocomplete="off"
 						autocapitalize="off"
 					></textarea>
-					{#if customFnResult.error}
+					{#if customFnResult.error || customRuntimeError}
 						<div class="rounded-md bg-red-50 px-3 py-2 font-mono text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-							{customFnResult.error}
+							{customFnResult.error || customRuntimeError}
 						</div>
 					{/if}
 					<p class="text-xs opacity-40">
