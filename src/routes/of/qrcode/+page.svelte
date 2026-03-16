@@ -2,6 +2,15 @@
 	import { encode } from 'uqr';
 	import { Download, Link as LinkIcon, Type, Contact, Square, Circle, Box, Code, Sparkles, Loader } from '@lucide/svelte';
 
+	const QrCodeDataType = {
+		Border: -1,
+		Data: 0,
+		Function: 1,
+		Position: 2,
+		Timing: 3,
+		Alignment: 4
+	} as const;
+
 	const inputClass =
 		'border border-neutral-300 dark:border-neutral-700 bg-transparent rounded-md px-3 py-2 w-full outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm';
 
@@ -117,11 +126,11 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 		if (dotStyle !== 'code' && dotStyle !== 'custom') return { fn: null, error: '' };
 		try {
 			const fn = new Function(
-				'x', 'y', 'cell', 'size', 'dotSize',
+				'x', 'y', 'cell', 'type', 'size', 'dotSize',
 				'foreground', 'background', 'outlineColor', 'isHollow',
 				customCode
 			) as (
-				x: number, y: number, cell: boolean, size: number, dotSize: number,
+				x: number, y: number, cell: boolean, type: number, size: number, dotSize: number,
 				foreground: string, background: string, outlineColor: string, isHollow: boolean
 			) => string;
 			return { fn, error: '' };
@@ -135,19 +144,19 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 	let customRuntimeError = $derived.by(() => {
 		if (!customFnResult.fn) return '';
 		try {
-			customFnResult.fn(5, 5, true,  21, 1.0, '#000000', '#ffffff', '#cccccc', false);
-			customFnResult.fn(5, 5, false, 21, 1.0, '#000000', '#ffffff', '#cccccc', false);
+			customFnResult.fn(5, 5, true,  QrCodeDataType.Data, 21, 1.0, '#000000', '#ffffff', '#cccccc', false);
+			customFnResult.fn(5, 5, false, QrCodeDataType.Data, 21, 1.0, '#000000', '#ffffff', '#cccccc', false);
 			return '';
 		} catch (e) {
 			return String(e);
 		}
 	});
 
-	function callCustomFn(x: number, y: number, cell: boolean): string {
+	function callCustomFn(x: number, y: number, cell: boolean, type: number): string {
 		if (!customFnResult.fn) return '';
 		try {
 			return customFnResult.fn(
-				x, y, cell, qrData.size, dotSize,
+				x, y, cell, type, qrData.size, dotSize,
 				foreground, background, outlineColor, isHollow
 			) || '';
 		} catch {
@@ -488,7 +497,7 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 						</div>
 					{/if}
 					<p class="text-xs opacity-40">
-						Variables: <code>x</code>, <code>y</code>, <code>cell</code>, <code>size</code>, <code>dotSize</code>, <code>foreground</code>, <code>background</code>, <code>outlineColor</code>, <code>isHollow</code>. Return an SVG element string.
+						Variables: <code>x</code>, <code>y</code>, <code>cell</code>, <code>type</code> (-1=Border, 0=Data, 1=Function, 2=Position, 3=Timing, 4=Alignment), <code>size</code>, <code>dotSize</code>, <code>foreground</code>, <code>background</code>, <code>outlineColor</code>, <code>isHollow</code>. Return an SVG element string.
 					</p>
 				</div>
 			{/if}
@@ -626,7 +635,7 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 				{#each qrData.data as row, y}
 					{#each row as cell, x}
 						{#if dotStyle === 'code' || dotStyle === 'custom'}
-							{@html callCustomFn(x, y, cell)}
+							{@html callCustomFn(x, y, cell, qrData.types?.[y]?.[x] ?? QrCodeDataType.Data)}
 						{:else if cell}
 							{#if dotStyle === 'square'}
 								<rect
