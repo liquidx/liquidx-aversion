@@ -106,7 +106,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			contents: buildPrompt(description.trim()),
 			config: {
 				temperature: 0.3,
-				maxOutputTokens: 8000
+				thinkingConfig: {
+					thinkingLevel: 'low'
+				}
 			}
 		});
 
