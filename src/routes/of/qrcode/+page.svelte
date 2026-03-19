@@ -197,6 +197,36 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 	let background = $state('#ffffff');
 	let transparentBg = $state(false);
 
+	type ColorMode = 'solid' | 'h-gradient' | 'v-gradient' | 'radial' | 'rainbow';
+	let colorMode = $state<ColorMode>('solid');
+	let foreground2 = $state('#ff6600');
+
+	function hexToRgb(hex: string): [number, number, number] {
+		const n = parseInt(hex.replace('#', ''), 16);
+		return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+	}
+
+	function lerpColor(a: string, b: string, t: number): string {
+		const [r1, g1, b1] = hexToRgb(a);
+		const [r2, g2, b2] = hexToRgb(b);
+		return `rgb(${Math.round(r1 + (r2 - r1) * t)},${Math.round(g1 + (g2 - g1) * t)},${Math.round(b1 + (b2 - b1) * t)})`;
+	}
+
+	function computeFill(x: number, y: number): string {
+		const size = qrData.size;
+		if (colorMode === 'h-gradient') return lerpColor(foreground, foreground2, x / (size - 1));
+		if (colorMode === 'v-gradient') return lerpColor(foreground, foreground2, y / (size - 1));
+		if (colorMode === 'radial') {
+			const dx = x - size / 2, dy = y - size / 2;
+			return lerpColor(foreground, foreground2, Math.min(1, Math.sqrt(dx * dx + dy * dy) / (size * 0.65)));
+		}
+		if (colorMode === 'rainbow') {
+			const hue = ((x + y) / (size * 2)) * 300 + 30;
+			return `hsl(${hue.toFixed(0)},85%,50%)`;
+		}
+		return foreground;
+	}
+
 	let qrContent = $derived.by(() => {
 		if (textMode === 'url') return urlInput || ' ';
 		if (textMode === 'text') return textInput || ' ';
@@ -605,6 +635,30 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 					</label>
 				</div>
 			</div>
+
+			<div class="flex flex-col gap-2">
+				<div class="text-xs font-bold tracking-wider uppercase opacity-50">Color Variation</div>
+				<div class="flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+					{#each ([['solid', 'Solid'], ['h-gradient', '→ H Grad'], ['v-gradient', '↓ V Grad'], ['radial', '◎ Radial'], ['rainbow', 'Rainbow']] as const) as [mode, label]}
+						<button
+							class="flex-1 rounded-md py-1 text-xs outline-none transition-all {colorMode === mode ? 'bg-white text-neutral-900 shadow dark:bg-neutral-600 dark:text-white' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}"
+							onclick={() => (colorMode = mode)}
+						>{label}</button>
+					{/each}
+				</div>
+				{#if colorMode !== 'solid' && colorMode !== 'rainbow'}
+					<div class="flex items-center gap-2">
+						<label class="text-xs font-bold tracking-wider uppercase opacity-50 whitespace-nowrap" for="foreground2">Second Color</label>
+						<input
+							type="color"
+							id="foreground2"
+							bind:value={foreground2}
+							class="h-8 w-8 shrink-0 cursor-pointer rounded"
+						/>
+						<input type="text" bind:value={foreground2} class="{inputClass} flex-1 uppercase" />
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 
@@ -643,10 +697,10 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 									y={y + (1 - dotSize) / 2}
 									width={dotSize}
 									height={dotSize}
-									fill={foreground}
+									fill={computeFill(x, y)}
 								/>
 							{:else if dotStyle === 'circle'}
-								<circle cx={x + 0.5} cy={y + 0.5} r={dotSize * 0.5} fill={foreground} />
+								<circle cx={x + 0.5} cy={y + 0.5} r={dotSize * 0.5} fill={computeFill(x, y)} />
 							{:else if dotStyle === 'rounded'}
 								<rect
 									x={x + (1 - dotSize) / 2}
@@ -655,7 +709,7 @@ return \`<circle cx="\${cx}" cy="\${cy}" r="\${r}" fill="\${foreground}" />\`;`
 									height={dotSize}
 									rx={dotRadius}
 									ry={dotRadius}
-									fill={foreground}
+									fill={computeFill(x, y)}
 								/>
 							{/if}
 						{:else if isHollow}
